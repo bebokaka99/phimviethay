@@ -26,7 +26,6 @@ const HeroSection = ({ movies }) => {
       navigate(`/phim/${movie.slug}`);
   };
 
-  // Hàm loại bỏ thẻ HTML (Clean Text)
   const stripHtml = (html) => {
       if (!html) return "";
       return html.replace(/<[^>]*>?/gm, '');
@@ -35,17 +34,15 @@ const HeroSection = ({ movies }) => {
   return (
     <div className="relative h-[500px] md:h-[700px] w-full text-white overflow-hidden group">
       
-      {/* BACKGROUND - Áp dụng transition-all cho mượt */}
+      {/* BACKGROUND - Thêm key để transition mượt khi đổi ảnh */}
       <div 
         key={movie._id + '-bg'} 
         className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
         style={{ backgroundImage: `url(${backdropImg})` }}
       >
-         {/* Giữ lại backdrop blur nhẹ */}
          <div className="absolute inset-0 bg-phim-dark/30 backdrop-blur-[2px]" /> 
       </div>
       
-      {/* GRADIENTS */}
       <div className="absolute inset-0 bg-gradient-to-t from-phim-dark via-phim-dark/20 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-r from-phim-dark via-phim-dark/50 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-l from-phim-dark/80 via-transparent to-transparent" />
@@ -54,10 +51,9 @@ const HeroSection = ({ movies }) => {
       <div className="absolute inset-0 flex items-center justify-center pb-8 md:pb-0">
         <div className="w-full max-w-[1500px] mx-auto px-6 md:px-16 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 mt-10 md:mt-0">
             
-            {/* CỘT TRÁI: TEXT - Dùng key để force animation khi slide đổi */}
+            {/* CỘT TRÁI: TEXT - Thêm key để re-render animation */}
             <div key={movie._id + '-text'} className="w-full md:w-[60%] space-y-6 z-10 animate-fade-up-custom">
                 
-                {/* Tên phim: GIẢM FONT SIZE và sử dụng ANIMATION CSS MỚI */}
                 <h1 
                     onClick={handleNavigate}
                     className="text-3xl md:text-5xl font-black leading-snug drop-shadow-2xl text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 py-2 cursor-pointer hover:opacity-80 transition line-clamp-2"
@@ -81,7 +77,6 @@ const HeroSection = ({ movies }) => {
                     </span>
                 </div>
 
-                {/* MÔ TẢ */}
                 <p className="text-gray-300 text-base md:text-lg line-clamp-3 leading-relaxed max-w-xl drop-shadow-md pb-2">
                    {stripHtml(movie.content) || `Trải nghiệm điện ảnh đỉnh cao với ${movie.name}. Một tác phẩm xuất sắc đến từ ${movie.origin_name}.`}
                 </p>
@@ -102,7 +97,7 @@ const HeroSection = ({ movies }) => {
                 </div>
             </div>
 
-            {/* CỘT PHẢI: POSTER - Dùng key để force animation khi slide đổi */}
+            {/* CỘT PHẢI: POSTER - Thêm key để re-render animation */}
             <div key={movie._id + '-poster'} className="hidden md:flex w-full md:w-[40%] justify-end relative z-10 animate-poster-custom pr-8">
                 <div 
                     onClick={handleNavigate}
