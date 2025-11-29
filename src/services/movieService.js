@@ -83,11 +83,20 @@ export const getMovieDetail = async (slug) => {
 };
 
 // 5. SEARCH
-export const searchMovies = async (keyword) => {
+export const searchMovies = async (keyword, page = 1) => {
     try {
-        const response = await client.get('/tim-kiem', { params: { keyword } });
+        const response = await client.get('/tim-kiem', { 
+            params: { 
+                keyword: keyword,
+                page: page // Truyền số trang lên server
+            } 
+        });
         const resData = response.data;
-        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
+
+        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) {
+            DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
+        }
+
         if (resData?.data?.items) {
             resData.data.items = resData.data.items.map(m => ({
                 ...m,
@@ -95,7 +104,7 @@ export const searchMovies = async (keyword) => {
                 thumb_url: resolveImg(m.thumb_url)
             }));
         }
-        return resData;
+        return resData; // Trả về full data để lấy pagination info
     } catch (error) { return null; }
 };
 

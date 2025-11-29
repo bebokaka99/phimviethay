@@ -40,13 +40,13 @@ const Catalog = ({ group }) => {
 
   const [menuData, setMenuData] = useState({ theLoai: [], quocGia: [] });
   const [showFilter, setShowFilter] = useState(false);
+  const [activeTags, setActiveTags] = useState([]);
 
   const [selectedFilters, setSelectedFilters] = useState({
       category: [], country: [], year: '', type: '', status: '', sort: 'modified.time'
   });
-  const [activeTags, setActiveTags] = useState([]);
 
-  // 1. Load Menu (Chạy độc lập 1 lần)
+  // 1. Load Menu (Chạy 1 lần)
   useEffect(() => {
       const fetchMenu = async () => {
           const data = await getMenuData();
@@ -63,31 +63,27 @@ const Catalog = ({ group }) => {
       if (group === 'the-loai') newFilters.category = [slug];
       else if (group === 'quoc-gia') newFilters.country = [slug];
       else if (group === 'danh-sach') {
-          if (FILTER_DATA.status.some(s => s.value === slug)) newFilters.status = slug;
+          if (['phim-hoan-thanh', 'phim-dang-chieu', 'phim-sap-chieu'].includes(slug)) newFilters.status = slug;
           else newFilters.type = slug;
       }
 
       const qCat = searchParams.get('category');
       const qCountry = searchParams.get('country');
-      const qYear = searchParams.get('year');
-      const qStatus = searchParams.get('status');
-      const qSort = searchParams.get('sort_field');
-
+      
       if (qCat) newFilters.category = [...newFilters.category, ...parseArray(qCat)];
       if (qCountry) newFilters.country = [...newFilters.country, ...parseArray(qCountry)];
-      if (qYear) newFilters.year = parseArray(qYear);
-
+      
       newFilters.category = [...new Set(newFilters.category)];
       newFilters.country = [...new Set(newFilters.country)];
 
-      if (qSort) newFilters.sort = qSort;
-      if (qStatus) newFilters.status = qStatus;
       if (searchParams.get('year')) newFilters.year = searchParams.get('year');
+      if (searchParams.get('sort_field')) newFilters.sort = searchParams.get('sort_field');
+      if (searchParams.get('status')) newFilters.status = searchParams.get('status');
       
       setSelectedFilters(newFilters);
   }, [group, slug, searchParams]);
 
-  // 3. FETCH DATA (ĐÃ TỐI ƯU: BỎ menuData KHỎI DEPENDENCY)
+  // 3. FETCH DATA (TỐI ƯU: BỎ menuData KHỎI DEPENDENCY)
   useEffect(() => {
     window.scrollTo(0, 0);
     const fetchData = async () => {
@@ -97,19 +93,20 @@ const Catalog = ({ group }) => {
             let apiType = 'danh-sach';
             const filterParams = {};
 
-            const urlCats = searchParams.get('category') ? searchParams.get('category').split(',') : [];
-            const urlCountries = searchParams.get('country') ? searchParams.get('country').split(',') : [];
+            const urlType = group === 'danh-sach' ? slug : searchParams.get('type');
+            const urlCats = group === 'the-loai' ? [slug, ...(searchParams.get('category')?.split(',') || [])] : (searchParams.get('category')?.split(',') || []);
+            const urlCountries = group === 'quoc-gia' ? [slug, ...(searchParams.get('country')?.split(',') || [])] : (searchParams.get('country')?.split(',') || []);
             const urlStatus = searchParams.get('status');
-            const urlType = group === 'danh-sach' && !['phim-hoan-thanh','phim-dang-chieu'].includes(slug) ? slug : searchParams.get('type');
 
-            if (group === 'the-loai') urlCats.push(slug);
-            if (group === 'quoc-gia') urlCountries.push(slug);
+            if (group === 'danh-sach' && ['phim-hoan-thanh','phim-dang-chieu', 'phim-sap-chieu'].includes(slug)) {
+                 // Status handled by logic below
+            }
 
             const uniqueCats = [...new Set(urlCats)];
             const uniqueCountries = [...new Set(urlCountries)];
 
             // Priority Logic
-            if (urlStatus) { apiSlug = urlStatus; apiType = 'danh-sach'; } 
+            if (urlStatus) { apiSlug = urlStatus; apiType = 'danh-sach'; }
             else if (urlType) { apiSlug = urlType; apiType = 'danh-sach'; }
             else if (uniqueCats.length > 0) { apiSlug = uniqueCats[0]; apiType = 'the-loai'; }
             else if (uniqueCountries.length > 0) { apiSlug = uniqueCountries[0]; apiType = 'quoc-gia'; }
@@ -123,23 +120,17 @@ const Catalog = ({ group }) => {
             if (searchParams.get('year')) filterParams.year = searchParams.get('year');
             if (searchParams.get('sort_field')) filterParams.sort_field = searchParams.get('sort_field');
 
-            // --- BUILD TITLE (DÙNG URL PARAMS, KHÔNG DÙNG MENUDATA ĐỂ TRÁNH RERENDER) ---
-            let pageTitle = 'Danh sách phim';
-            const tags = [];
-            if(urlStatus) tags.push(FILTER_DATA.status.find(s=>s.value===urlStatus)?.name);
-            if(urlType && urlType !== 'phim-moi') tags.push(FILTER_DATA.type.find(t=>t.value===urlType)?.name);
-            if(filterParams.year) tags.push(`Năm ${filterParams.year}`);
-            
-            // Phần tên thể loại/quốc gia sẽ được update sau khi menuData load xong (nhưng ko trigger fetch lại)
-            setActiveTags(tags.filter(Boolean).map(l => ({ label: l }))); 
-
+            // Gọi API (Không chờ menuData)
             const data = await getMoviesBySlug(apiSlug, currentPage, apiType, filterParams);
             
             if (data?.data?.items) {
-                setMovies(data.data.items);
-                // Set title từ API trước
-                setTitle(data.data.titlePage || 'Danh sách phim');
+                let finalMovies = data.data.items;
+                if (urlStatus) finalMovies = finalMovies.filter(movie => movie.status === (urlStatus === 'phim-hoan-thanh' ? 'completed' : 'ongoing'));
+                setMovies(finalMovies);
                 
+                // Set Title mặc định từ API trước
+                setTitle(data.data.titlePage || 'Danh sách phim');
+
                 const pagination = data.data.params?.pagination;
                 if (pagination) setTotalPages(Math.ceil(pagination.totalItems / pagination.totalItemsPerPage));
             } else {
@@ -149,24 +140,26 @@ const Catalog = ({ group }) => {
         finally { setLoading(false); }
     };
     fetchData();
-  }, [slug, currentPage, group, searchParams]); // BỎ menuData và selectedFilters
+  }, [slug, currentPage, group, searchParams]); // <--- BỎ menuData RA KHỎI ĐÂY
 
-  // Effect riêng để update Title/Tags khi có Menu Data (UI only, ko fetch lại phim)
+  // 4. EFFECT RIÊNG ĐỂ UPDATE TITLE/TAGS KHI CÓ MENU DATA (UI ONLY)
   useEffect(() => {
-      if(menuData.theLoai.length === 0) return;
+      // Chỉ chạy khi menuData đã load xong
+      if (menuData.theLoai.length === 0) return;
+
+      const urlType = group === 'danh-sach' && !['phim-hoan-thanh','phim-dang-chieu','phim-sap-chieu'].includes(slug) ? slug : searchParams.get('type');
+      const urlStatus = searchParams.get('status') || (['phim-hoan-thanh','phim-dang-chieu','phim-sap-chieu'].includes(slug) ? slug : '');
       
       const urlCats = searchParams.get('category') ? searchParams.get('category').split(',') : [];
-      const urlCountries = searchParams.get('country') ? searchParams.get('country').split(',') : [];
       if (group === 'the-loai') urlCats.push(slug);
+      
+      const urlCountries = searchParams.get('country') ? searchParams.get('country').split(',') : [];
       if (group === 'quoc-gia') urlCountries.push(slug);
 
       const tags = [];
-      const urlStatus = searchParams.get('status');
-      const urlType = group === 'danh-sach' && !['phim-hoan-thanh','phim-dang-chieu'].includes(slug) ? slug : searchParams.get('type');
-
       if(urlStatus) tags.push({ label: FILTER_DATA.status.find(s=>s.value===urlStatus)?.name });
       if(urlType && urlType !== 'phim-moi') tags.push({ label: FILTER_DATA.type.find(t=>t.value===urlType)?.name });
-
+      
       [...new Set(urlCats)].forEach(c => tags.push({ label: menuData.theLoai.find(i=>i.slug===c)?.name || c }));
       [...new Set(urlCountries)].forEach(c => tags.push({ label: menuData.quocGia.find(i=>i.slug===c)?.name || c }));
 
@@ -180,20 +173,18 @@ const Catalog = ({ group }) => {
   }, [menuData, searchParams, slug, group]);
 
 
-  // --- UI HANDLERS (Giữ nguyên) ---
+  // --- HANDLERS (Giữ nguyên) ---
   const handleApplyFilter = () => {
       let path = '/danh-sach/';
       path += selectedFilters.type ? selectedFilters.type : 'phim-moi';
-      // Nếu có status thì ưu tiên status làm path
-      if (selectedFilters.status) path = `/danh-sach/${selectedFilters.status}`;
+      if (selectedFilters.status) path = `/danh-sach/${selectedFilters.status}`; // Ưu tiên status làm path nếu có
       
       const params = new URLSearchParams();
-
       if (selectedFilters.category.length > 0) params.set('category', selectedFilters.category.join(','));
       if (selectedFilters.country.length > 0) params.set('country', selectedFilters.country.join(','));
       if (selectedFilters.year) params.set('year', selectedFilters.year);
       if (selectedFilters.sort) params.set('sort_field', selectedFilters.sort);
-      // Nếu status không được làm path (do có type chẳng hạn, dù logic trên đã ưu tiên status) thì add param
+      // Nếu status không làm path (do logic trên) thì đẩy vào params
       if (selectedFilters.status && !path.includes(selectedFilters.status)) params.set('status', selectedFilters.status);
       
       params.set('page', '1');
@@ -277,9 +268,9 @@ const Catalog = ({ group }) => {
           {/* PANEL BỘ LỌC */}
           <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showFilter ? 'max-h-[3000px] opacity-100 mb-12' : 'max-h-0 opacity-0 mb-0'}`}>
               <div className="bg-[#111] border border-white/10 p-6 md:p-8 rounded-2xl shadow-2xl">
-                  <FilterRow label="Quốc gia" icon={<FaGlobe/>} items={menuData.quocGia} activeValue={selectedFilters.country} onSelect={(val) => toggleArrayFilter('country', val)} isMulti={true} gridClass="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2" />
-                  <FilterRow label="Loại phim" icon={<FaFilm/>} items={FILTER_DATA.type} activeValue={selectedFilters.type} onSelect={(val) => setSingleFilter('type', val)} />
                   <FilterRow label="Tình trạng" icon={<FaInfoCircle/>} items={FILTER_DATA.status} activeValue={selectedFilters.status} onSelect={(val) => setSingleFilter('status', val)} />
+                  <FilterRow label="Loại phim" icon={<FaFilm/>} items={FILTER_DATA.type} activeValue={selectedFilters.type} onSelect={(val) => setSingleFilter('type', val)} />
+                  <FilterRow label="Quốc gia" icon={<FaGlobe/>} items={menuData.quocGia} activeValue={selectedFilters.country} onSelect={(val) => toggleArrayFilter('country', val)} isMulti={true} gridClass="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2" />
                   <FilterRow label="Thể loại" icon={<FaLayerGroup/>} items={menuData.theLoai} activeValue={selectedFilters.category} onSelect={(val) => toggleArrayFilter('category', val)} isMulti={true} gridClass="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2" />
                   <FilterRow label="Năm" icon={<FaCalendarAlt/>} items={YEARS} activeValue={selectedFilters.year} onSelect={(val) => setSingleFilter('year', val)} gridClass="grid grid-cols-4 gap-2" />
                   <FilterRow label="Sắp xếp" icon={<FaSortAmountDown/>} items={FILTER_DATA.sort} activeValue={selectedFilters.sort} onSelect={(val) => setSingleFilter('sort', val)} />

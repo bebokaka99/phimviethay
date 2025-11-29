@@ -1,16 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Header from '../components/layout/Header';
-import { searchMovies, IMG_URL } from '../services/movieService';
-import { FaPlayCircle, FaSearch, FaFilm, FaStar } from 'react-icons/fa';
+import { searchMovies } from '../services/movieService';
+import MovieGrid from '../components/movies/MovieGrid';
+import { MovieGridSkeleton } from '../components/common/Skeleton';
+// Import thêm icon mũi tên
+import { FaSearch, FaFilm, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const SearchPage = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const keyword = searchParams.get('keyword');
   
+  // Lấy trang hiện tại từ URL (VD: ?keyword=...&page=2)
+  const currentPage = parseInt(searchParams.get('page')) || 1;
+  
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1); // State tổng số trang
+  const [totalItems, setTotalItems] = useState(0); // Tổng số phim tìm thấy
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -19,11 +28,24 @@ const SearchPage = () => {
     const fetchSearch = async () => {
         setLoading(true);
         try {
-            const data = await searchMovies(keyword);
+            // Gọi hàm tìm kiếm với tham số page
+            const data = await searchMovies(keyword, currentPage);
+            
             if (data?.data?.items) {
                 setMovies(data.data.items);
+                
+                // Tính toán phân trang từ dữ liệu API trả về
+                const pagination = data.data.params?.pagination;
+                if (pagination) {
+                    setTotalItems(pagination.totalItems);
+                    // API OPhim trả về totalItemsPerPage
+                    const total = Math.ceil(pagination.totalItems / pagination.totalItemsPerPage);
+                    setTotalPages(total);
+                }
             } else {
                 setMovies([]);
+                setTotalPages(1);
+                setTotalItems(0);
             }
         } catch (error) {
             console.error(error);
@@ -31,101 +53,95 @@ const SearchPage = () => {
             setLoading(false);
         }
     };
+    
     fetchSearch();
-  }, [keyword]);
+  }, [keyword, currentPage]); // Chạy lại khi từ khóa HOẶC trang thay đổi
+
+  // Hàm chuyển trang
+  const handlePageChange = (newPage) => {
+      if (newPage >= 1 && newPage <= totalPages) {
+          // Cập nhật URL, giữ nguyên keyword, chỉ đổi page
+          setSearchParams({ keyword, page: newPage });
+      }
+  };
 
   return (
     <div className="bg-phim-dark min-h-screen text-white font-sans">
-      <Header />
+      <Helmet>
+          <title>{`Tìm kiếm: ${keyword} - Trang ${currentPage} | PhimVietHay`}</title>
+          <meta name="description" content={`Kết quả tìm kiếm cho từ khóa ${keyword}.`} />
+      </Helmet>
+
       
       <div className="pt-28 px-4 md:px-12 container mx-auto pb-20">
           
           {/* Header Kết quả */}
-          <div className="mb-10 border-b border-gray-800 pb-6">
-              <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-                  <span className="bg-phim-accent p-3 rounded-full">
-                    <FaSearch className="text-white text-xl" />
-                  </span>
-                  Kết quả cho: <span className="text-phim-accent italic">"{keyword}"</span>
-              </h2>
-              {!loading && (
-                  <p className="text-gray-400 mt-2 ml-14">
-                      Tìm thấy <strong className="text-white">{movies.length}</strong> bộ phim phù hợp
-                  </p>
-              )}
+          <div className="mb-10 border-b border-gray-800 pb-6 flex items-end justify-between">
+              <div>
+                  <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                      <span className="bg-red-600 p-3 rounded-full shadow-lg shadow-red-900/20">
+                        <FaSearch className="text-white text-xl" />
+                      </span>
+                      Kết quả cho: <span className="text-red-500 italic">"{keyword}"</span>
+                  </h2>
+                  {!loading && (
+                      <p className="text-gray-400 mt-4 ml-2 text-sm">
+                          Tìm thấy <strong className="text-white">{totalItems}</strong> phim (Trang {currentPage}/{totalPages})
+                      </p>
+                  )}
+              </div>
           </div>
 
-          {/* Loading State */}
-          {loading && (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-phim-accent"></div>
-                  <p className="text-gray-500 animate-pulse">Đang quét kho phim...</p>
+          {/* Content */}
+          {loading ? (
+              <div className="py-10">
+                  <MovieGridSkeleton />
               </div>
-          )}
+          ) : (
+              <>
+                  {movies.length > 0 ? (
+                      <>
+                          <MovieGrid movies={movies} />
 
-          {/* Grid Kết quả (STYLE MỚI GIỐNG HOME) */}
-          {!loading && movies.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-8">
-                  {movies.map((movie) => (
-                      <div 
-                        key={movie._id} 
-                        className="relative group cursor-pointer select-none"
-                        onClick={() => navigate(`/phim/${movie.slug}`)}
-                      >
-                          {/* Card Ảnh */}
-                          <div className="relative w-full aspect-[2/3] rounded-lg overflow-hidden mb-3 bg-gray-900 transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-lg group-hover:shadow-black/60 ring-1 ring-white/10 group-hover:ring-phim-accent/50">
-                              <img 
-                                src={`${IMG_URL}${movie.thumb_url}`} 
-                                alt={movie.name} 
-                                className="w-full h-full object-cover transform group-hover:brightness-75 transition-all duration-500"
-                                loading="lazy"
-                              />
-                              
-                              {/* Badges Top */}
-                              <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10"> 
-                                  <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                                      {movie.quality || 'HD'}
-                                  </span>
-                                  <span className="bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1">
-                                      {movie.vote_average || '8.5'} <FaStar size={8} /> 
-                                  </span>
-                              </div>
+                          {/* --- PHÂN TRANG (PAGINATION) --- */}
+                          {totalPages > 1 && (
+                              <div className="flex justify-center items-center gap-4 mt-16">
+                                  <button 
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold transition ${currentPage === 1 ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-white/10 hover:bg-red-600 hover:text-white'}`}
+                                  >
+                                      <FaChevronLeft /> Trước
+                                  </button>
+                                  
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-gray-400 font-medium text-sm">Trang</span>
+                                      <span className="bg-red-600 text-white font-bold w-10 h-10 flex items-center justify-center rounded-full shadow-lg border border-red-500">{currentPage}</span>
+                                      <span className="text-gray-400 font-medium text-sm">/ {totalPages}</span>
+                                  </div>
 
-                              {/* Badge Bottom (Số tập) */}
-                              <div className="absolute bottom-2 right-2 z-10">
-                                  <span className="bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10">
-                                      {movie.episode_current || 'Full'}
-                                  </span>
+                                  <button 
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold transition ${currentPage === totalPages ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-white/10 hover:bg-red-600 hover:text-white'}`}
+                                  >
+                                      Sau <FaChevronRight />
+                                  </button>
                               </div>
-
-                              {/* Play Icon Center */}
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-75 group-hover:scale-100">
-                                  <FaPlayCircle className="text-4xl text-white drop-shadow-xl" />
-                              </div>
-                          </div>
-                          
-                          {/* Info */}
-                          <div className="px-1">
-                              <h3 className="font-bold text-sm text-gray-200 line-clamp-1 group-hover:text-phim-accent transition-colors">
-                                  {movie.name}
-                              </h3>
-                              <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
-                                  <span className="line-clamp-1 max-w-[60%]">{movie.origin_name}</span>
-                                  <span className="text-gray-400 border border-gray-700 px-1 rounded">{movie.year}</span>
-                              </div>
-                          </div>
+                          )}
+                      </>
+                  ) : (
+                      // Empty State
+                      <div className="flex flex-col items-center justify-center py-32 text-gray-500 opacity-60 border-2 border-dashed border-gray-800 rounded-2xl bg-white/5">
+                          <FaFilm className="text-7xl mb-4 text-gray-600" />
+                          <p className="text-2xl font-bold text-gray-400">Không tìm thấy phim nào.</p>
+                          <p className="text-sm mt-2">Hãy thử tìm bằng tên tiếng Anh hoặc từ khóa ngắn hơn.</p>
+                          <button onClick={() => navigate('/')} className="mt-6 px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition font-bold">
+                              Về trang chủ
+                          </button>
                       </div>
-                  ))}
-              </div>
-          )}
-
-          {/* Không tìm thấy (Empty State) */}
-          {!loading && movies.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-500 opacity-60 border-2 border-dashed border-gray-800 rounded-2xl bg-white/5">
-                  <FaFilm className="text-6xl mb-4" />
-                  <p className="text-xl font-medium">Không tìm thấy phim nào.</p>
-                  <p className="text-sm mt-2">Hãy thử tìm bằng tên tiếng Anh hoặc từ khóa ngắn hơn.</p>
-              </div>
+                  )}
+              </>
           )}
       </div>
     </div>
