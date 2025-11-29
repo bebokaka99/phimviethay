@@ -249,7 +249,9 @@ const Header = () => {
                     </div>
                 ) : (
                     <div className="p-5 border-b border-white/10 flex justify-between items-center bg-black/20">
-                        <h2 className="text-phim-accent text-2xl font-black uppercase">PhimVietHay</h2>
+                        <div onClick={() => navigate('/')}>
+                            <Logo />
+                        </div>
                         <button onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white text-xl"><FaTimes /></button>
                     </div>
                 )}
