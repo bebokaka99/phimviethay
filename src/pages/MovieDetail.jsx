@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import { getMovieDetail, IMG_URL } from '../services/movieService';
-// Import thêm checkFavoriteStatus và toggleFavorite
 import { checkFavoriteStatus, toggleFavorite } from '../services/authService'; 
 import { FaPlay, FaClock, FaGlobe, FaStar, FaShareAlt, FaHeart, FaChevronDown, FaChevronUp, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
@@ -32,10 +31,31 @@ const MovieDetail = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   
-  // --- STATE YÊU THÍCH ---
   const [isFavorite, setIsFavorite] = useState(false);
 
   const castRef = useRef(null);
+
+  // --- HÀM TIỆN ÍCH (FIX: ĐÃ KHÔI PHỤC) ---
+  const getInitials = (name) => {
+      if (!name) return "?";
+      const parts = name.trim().split(' ');
+      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
+  const getRandomGradient = (name) => {
+      const gradients = [
+        'from-red-600 to-rose-900', 'from-blue-600 to-indigo-900', 
+        'from-emerald-600 to-teal-900', 'from-violet-600 to-purple-900',
+        'from-amber-500 to-orange-900'
+      ];
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return gradients[Math.abs(hash) % gradients.length];
+  };
+
+  const stripHtml = (html) => html ? html.replace(/<[^>]*>?/gm, '') : '';
+  // ------------------------------------------
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -51,8 +71,6 @@ const MovieDetail = () => {
             if (data?.status && data?.movie) {
                 setMovie(data.movie);
                 
-                // Kiểm tra xem user đã thích phim này chưa
-                // Lưu ý: Hàm này sẽ trả về false nếu chưa đăng nhập
                 const favStatus = await checkFavoriteStatus(data.movie.slug);
                 setIsFavorite(favStatus);
 
@@ -80,23 +98,19 @@ const MovieDetail = () => {
       }
   };
 
-  // --- HÀM XỬ LÝ THẢ TIM ---
   const handleToggleFavorite = async () => {
       try {
-          // Gọi API toggle
           const newStatus = await toggleFavorite({
               slug: movie.slug,
               name: movie.name,
               thumb_url: movie.thumb_url
           });
           
-          setIsFavorite(newStatus); // Cập nhật icon
+          setIsFavorite(newStatus);
           showToast(newStatus ? 'Đã thêm vào danh sách yêu thích ❤️' : 'Đã xóa khỏi danh sách yêu thích 💔');
       } catch (error) {
-          // Nếu chưa đăng nhập hoặc lỗi
           showToast(error.toString());
           if (error === "Vui lòng đăng nhập để lưu phim!") {
-              // Chờ 1s rồi chuyển trang login
               setTimeout(() => navigate('/login'), 1500);
           }
       }
@@ -111,7 +125,6 @@ const MovieDetail = () => {
       }
   };
 
-  // Helper Copy Link
   const handleShare = () => {
       navigator.clipboard.writeText(window.location.href);
       showToast('Đã sao chép đường dẫn phim!');
@@ -132,26 +145,6 @@ const MovieDetail = () => {
 
   const backdropImg = movie.poster_url ? `${IMG_URL}${movie.poster_url}` : `${IMG_URL}${movie.thumb_url}`;
   const posterImg = `${IMG_URL}${movie.thumb_url}`;
-
-  const getInitials = (name) => {
-      if (!name) return "?";
-      const parts = name.trim().split(' ');
-      if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-  };
-
-  const getRandomGradient = (name) => {
-      const gradients = [
-        'from-red-600 to-rose-900', 'from-blue-600 to-indigo-900', 
-        'from-emerald-600 to-teal-900', 'from-violet-600 to-purple-900',
-        'from-amber-500 to-orange-900'
-      ];
-      let hash = 0;
-      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      return gradients[Math.abs(hash) % gradients.length];
-  };
-
-  const stripHtml = (html) => html ? html.replace(/<[^>]*>?/gm, '') : '';
 
   return (
     <div className="bg-phim-dark min-h-screen text-white pb-10 font-sans overflow-x-hidden">
@@ -228,7 +221,6 @@ const MovieDetail = () => {
                               <FaPlay /> XEM NGAY
                           </button>
                           
-                          {/* --- NÚT TIM (ĐỔI MÀU KHI ĐƯỢC CHỌN) --- */}
                           <button 
                             onClick={handleToggleFavorite} 
                             className={`p-3.5 rounded-full transition border ${isFavorite ? 'bg-red-600 border-red-600 text-white shadow-lg shadow-red-900/40' : 'bg-white/10 text-white border-white/10 hover:bg-white/20'}`}
@@ -236,7 +228,6 @@ const MovieDetail = () => {
                               <FaHeart />
                           </button>
                           
-                          {/* --- NÚT SHARE --- */}
                           <button 
                             onClick={handleShare} 
                             className="bg-white/10 text-white p-3.5 rounded-full hover:bg-white/20 transition border border-white/10"
