@@ -1,156 +1,93 @@
 import axios from 'axios';
 
-// 1. CẤU HÌNH CLIENT
 const client = axios.create({
     baseURL: 'https://ophim1.com/v1/api',
     headers: { 'Content-Type': 'application/json' }
 });
 
-// Biến lưu domain ảnh (Mặc định, sẽ tự cập nhật khi gọi API)
 let DYNAMIC_CDN = 'https://img.ophim.live/uploads/movies/'; 
-
-// Export rỗng để component không tự ghép link
 export const IMG_URL = ''; 
 
-// --- HÀM XỬ LÝ ẢNH (CORE) ---
+// Helper xử lý ảnh
 const resolveImg = (url) => {
-    // 1. Nếu không có ảnh -> Trả về ảnh giữ chỗ
-    if (!url) return 'https://placehold.co/300x450?text=No+Image';
-    
-    // 2. Nếu là link full (http/https) -> Giữ nguyên
+    if (!url || url === "") return 'https://placehold.co/300x450?text=No+Image';
     if (url.startsWith('http')) return url;
-
-    // 3. Xử lý đường dẫn tương đối (loại bỏ dấu / ở đầu nếu có)
     const cleanPath = url.startsWith('/') ? url.slice(1) : url;
-
-    // 4. Ghép với Domain động lấy từ API
     return `${DYNAMIC_CDN}${cleanPath}`;
 };
 
-// ============================================================
-
-// 1. API TRANG CHỦ (/home)
+// 1. HOME
 export const getHomeData = async () => {
     try {
         const response = await client.get('/home');
         const resData = response.data;
-
-        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) {
-            DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
-        }
-
+        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
         if (resData?.data?.items) {
-            resData.data.items = resData.data.items.map(m => {
-                const thumb = resolveImg(m.thumb_url);
-                const poster = m.poster_url ? resolveImg(m.poster_url) : thumb;
-                
-                return {
-                    ...m,
-                    poster_url: poster,
-                    thumb_url: thumb
-                };
-            });
+            resData.data.items = resData.data.items.map(m => ({
+                ...m,
+                poster_url: m.poster_url ? resolveImg(m.poster_url) : resolveImg(m.thumb_url),
+                thumb_url: resolveImg(m.thumb_url)
+            }));
         }
         return resData;
-    } catch (error) {
-        console.error("Lỗi Home:", error);
-        return null;
-    }
+    } catch (error) { return null; }
 };
 
-// 2. LẤY DANH SÁCH (NÂNG CẤP ĐỂ HỖ TRỢ LỌC & SẮP XẾP)
+// 2. LIST
 export const getMoviesBySlug = async (slug, page = 1, type = 'danh-sach', filterParams = {}) => {
     try {
         const url = `/${type}/${slug}`;
-                
-        // Gộp params phân trang và params lọc (sort, year, etc...)
-        const response = await client.get(url, {
-            params: { 
-                page: page,
-                ...filterParams // Truyền thêm sort_field, year... vào đây
-            }
-        });
+        const response = await client.get(url, { params: { page, ...filterParams } });
         const resData = response.data;
-
-        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) {
-            DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
-        }
-
+        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
         if (resData?.data?.items) {
-            resData.data.items = resData.data.items.map(m => {
-                const thumb = resolveImg(m.thumb_url);
-                return {
-                    ...m,
-                    poster_url: m.poster_url ? resolveImg(m.poster_url) : thumb,
-                    thumb_url: thumb
-                };
-            });
+            resData.data.items = resData.data.items.map(m => ({
+                ...m,
+                poster_url: m.poster_url ? resolveImg(m.poster_url) : resolveImg(m.thumb_url),
+                thumb_url: resolveImg(m.thumb_url)
+            }));
         }
         return resData;
-    } catch (error) {
-        return null;
-    }
+    } catch (error) { return null; }
 }
 
-// 3. API MENU
+// 3. MENU
 export const getMenuData = async () => {
     try {
-        const [theLoai, quocGia] = await Promise.all([
-            client.get('/the-loai'),
-            client.get('/quoc-gia')
-        ]);
-        return {
-            theLoai: theLoai.data.data.items || [],
-            quocGia: quocGia.data.data.items || []
-        };
+        const [theLoai, quocGia] = await Promise.all([client.get('/the-loai'), client.get('/quoc-gia')]);
+        return { theLoai: theLoai.data.data.items || [], quocGia: quocGia.data.data.items || [] };
     } catch (error) { return { theLoai: [], quocGia: [] }; }
 };
 
-// 4. API CHI TIẾT PHIM
+// 4. DETAIL
 export const getMovieDetail = async (slug) => {
     try {
         const cleanSlug = slug.replace(/^player-/, '');
-        
         const response = await client.get(`/phim/${cleanSlug}`);
         const resData = response.data;
 
-        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) {
-            DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
-        }
+        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
 
         if (resData.status === 'success' && resData.data && resData.data.item) {
             const movieObj = resData.data.item;
-            
             const thumb = resolveImg(movieObj.thumb_url);
             const poster = movieObj.poster_url ? resolveImg(movieObj.poster_url) : thumb;
 
             movieObj.poster_url = poster;
             movieObj.thumb_url = thumb;
 
-            const episodes = movieObj.episodes || [];
-
-            return {
-                status: true,
-                movie: movieObj,
-                episodes: episodes
-            };
+            return { status: true, movie: movieObj, episodes: movieObj.episodes || [] };
         }
         return { status: false, msg: 'Không tìm thấy phim' };
-    } catch (error) {
-        return { status: false, msg: 'Lỗi kết nối Server' };
-    }
+    } catch (error) { return { status: false, msg: 'Lỗi kết nối Server' }; }
 };
 
-// 5. API TÌM KIẾM
+// 5. SEARCH
 export const searchMovies = async (keyword) => {
     try {
         const response = await client.get('/tim-kiem', { params: { keyword } });
         const resData = response.data;
-
-        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) {
-            DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
-        }
-
+        if (resData?.data?.APP_DOMAIN_CDN_IMAGE) DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
         if (resData?.data?.items) {
             resData.data.items = resData.data.items.map(m => ({
                 ...m,
@@ -160,4 +97,32 @@ export const searchMovies = async (keyword) => {
         }
         return resData;
     } catch (error) { return null; }
+};
+
+// --- [QUAN TRỌNG] API PHỤ TRỢ CỦA OPHIM ---
+
+// 6. Lấy Diễn viên (Có ảnh)
+export const getMoviePeoples = async (slug) => {
+    try {
+        const cleanSlug = slug.replace(/^player-/, '');
+        const response = await client.get(`/phim/${cleanSlug}/peoples`);
+        
+        // Cấu trúc JSON: { data: { peoples: [...] } }
+        if (response.data?.data?.peoples) {
+             return response.data.data.peoples; 
+        }
+        return [];
+    } catch (error) {
+        return [];
+    }
+};
+
+// 7. API LẤY HÌNH ẢNH
+export const getMovieImages = async (slug) => {
+    try {
+        const cleanSlug = slug.replace(/^player-/, '');
+        const response = await client.get(`/phim/${cleanSlug}/images`);
+        // Thường cấu trúc images cũng tương tự
+        return response.data?.data || []; 
+    } catch (error) { return []; }
 };

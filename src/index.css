@@ -2,9 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* TÙY CHỈNH SCROLLBAR (Thanh cuộn đẹp hơn) */
+/* --- 1. TÙY CHỈNH SCROLLBAR --- */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px; /* Thêm chiều cao cho thanh cuộn ngang */
 }
 ::-webkit-scrollbar-track {
   background: #0a0a0a; 
@@ -17,29 +18,26 @@
   background: #e50914; /* Hover đổi màu đỏ */
 }
 
-/* NỀN TỔNG THỂ (CINEMATIC BACKGROUND) */
+/* --- 2. NỀN TỔNG THỂ (CINEMATIC) --- */
 body {
   margin: 0;
   padding: 0;
   color: white;
-  /* Màu nền gốc: Đen rất sâu (không phải đen tuyền) */
   background-color: #050505;
   
-  /* Tạo 2 đốm sáng mờ ảo ở góc trên trái (Đỏ) và phải (Xanh/Tím nhạt) */
+  /* Hiệu ứng đốm sáng nền */
   background-image: 
-    radial-gradient(circle at 0% 0%, rgba(229, 9, 20, 0.15) 0%, transparent 50%), /* Đốm đỏ */
-    radial-gradient(circle at 100% 0%, rgba(30, 41, 59, 0.3) 0%, transparent 50%); /* Đốm xanh than */
+    radial-gradient(circle at 0% 0%, rgba(229, 9, 20, 0.15) 0%, transparent 50%), 
+    radial-gradient(circle at 100% 0%, rgba(30, 41, 59, 0.3) 0%, transparent 50%);
     
-  /* Cố định nền để tạo hiệu ứng trôi khi cuộn */
   background-attachment: fixed;
   background-size: cover;
   
-  /* Font chữ */
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Tiện ích ẩn thanh cuộn nhưng vẫn cuộn được (cho các list ngang) */
+/* --- 3. TIỆN ÍCH --- */
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
 }
@@ -48,18 +46,22 @@ body {
     scrollbar-width: none;
 }
 
-/* Animation xuất hiện */
+/* --- 4. ANIMATION CƠ BẢN --- */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
+
+/* --- 5. ANIMATION CHO HERO SECTION (ĐÃ TỐI ƯU MƯỢT HƠN) --- */
+
+/* Chữ chạy từ dưới lên */
 @keyframes fadeInUpCustom {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px); /* Tăng khoảng cách trượt để rõ hơn */
   }
   to {
     opacity: 1;
@@ -68,15 +70,49 @@ body {
 }
 
 .animate-fade-up-custom {
-  animation: fadeInUpCustom 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards; /* Tốc độ mượt mà hơn */
+  /* Tăng thời gian lên 0.8s để mượt hơn */
+  animation: fadeInUpCustom 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; 
 }
 
-/* Thêm keyframes cho poster nếu nó chưa có */
+/* Ảnh Poster xuất hiện */
 @keyframes posterFadeIn {
-    0% { opacity: 0; transform: translateY(10px) rotate(1deg); }
-    100% { opacity: 1; transform: translateY(0) rotate(3deg); }
+    0% { 
+        opacity: 0; 
+        transform: translateY(20px) scale(0.95) rotate(0deg); 
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0) scale(1) rotate(3deg); 
+    }
 }
 
 .animate-poster-custom {
-    animation: posterFadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    /* Poster hiện chậm hơn chữ một chút (1s) tạo cảm giác lớp lang */
+    animation: posterFadeIn 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* --- 6. ANIMATION CHO TOAST THÔNG BÁO (MỚI) --- */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-down {
+    animation: fadeInDown 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Hiệu ứng lắc nhẹ khi lỗi (Form Login) */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
 }

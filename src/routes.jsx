@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
+import MainLayout from "./components/layout/MainLayout";
 import Home from "./pages/Home";
 import MovieDetail from "./pages/MovieDetail";
 import WatchMovie from "./pages/WatchMovie";
@@ -15,64 +16,30 @@ import Favorites from "./pages/Favorites";
 
 export const router = createBrowserRouter([
   {
-    path: "/",
-    element: <Home />,
+    element: <MainLayout />, // Bọc tất cả trong Layout
+    children: [
+      { path: "/", element: <Home /> },
+      { path: "/phim/:slug", element: <MovieDetail /> },
+      { path: "/xem-phim/:slug", element: <WatchMovie /> },
+      { path: "/tim-kiem", element: <SearchPage /> },
+      { path: "/the-loai/:slug", element: <Catalog group="the-loai" /> },
+      { path: "/quoc-gia/:slug", element: <Catalog group="quoc-gia" /> },
+      { path: "/danh-sach/:slug", element: <Catalog group="danh-sach" /> },
+      { path: "/nam-phat-hanh/:slug", element: <Catalog group="nam-phat-hanh" /> },
+      
+      // Các trang không có slug
+      { path: "/the-loai", element: <Catalog group="danh-sach" /> },
+      { path: "/quoc-gia", element: <Catalog group="danh-sach" /> },
+      { path: "/danh-sach", element: <Catalog group="danh-sach" /> },
+
+      // Auth & User
+      { path: "/ho-so", element: <Profile /> },
+      { path: "/tu-phim", element: <Favorites /> }, // Nhớ import Favorites
+    ],
     errorElement: <NotFound />,
   },
-  {
-    path: "/phim/:slug",
-    element: <MovieDetail />,
-  },
-  {
-    path: "/xem-phim/:slug",
-    element: <WatchMovie />,
-  },
-  {
-    path: "/tim-kiem",
-    element: <SearchPage />,
-  },
-  {
-    path: "/the-loai/:slug",
-    element: <Catalog group="the-loai" />,
-  },
-  {
-    path: "/quoc-gia/:slug",
-    element: <Catalog group="quoc-gia" />,
-  },
-  {
-    path: "/danh-sach/:slug",
-    element: <Catalog group="danh-sach" />,
-  },
-  {
-    path: "/nam-phat-hanh/:slug",
-    element: <Catalog group="nam-phat-hanh" />,
-  },
-
-  // Route xem tất cả
-  { path: "/the-loai", element: <Catalog group="danh-sach" /> },
-  { path: "/quoc-gia", element: <Catalog group="danh-sach" /> },
-  { path: "/danh-sach", element: <Catalog group="danh-sach" /> },
-
-  // --- AUTH ROUTES ---
-  {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/register",
-    element: <Register />,
-  },
-  {
-    path: "/ho-so",
-    element: <Profile />,
-  },
-  {
-    path: "/tu-phim",
-    element: <Favorites />,
-  },
-  {
-    path: "*",
-    element: <NotFound />,
-  }
-
+  
+  // Login/Register thường đứng riêng, không cần Header/Footer (hoặc tùy bạn)
+  { path: "/login", element: <Login /> },
+  { path: "/register", element: <Register /> },
 ]);

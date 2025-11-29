@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+// 1. IMPORT HELMET CHO SEO
+import { Helmet } from 'react-helmet-async';
 import Header from '../components/layout/Header';
 import { getMovieDetail, IMG_URL } from '../services/movieService';
-// Thêm icon FaStepForward
 import { FaPlay, FaList, FaShareAlt, FaArrowLeft, FaExpand, FaLightbulb, FaStar, FaServer, FaCompress, FaStepForward } from 'react-icons/fa';
 
 const WatchMovie = () => {
@@ -13,7 +14,7 @@ const WatchMovie = () => {
   const [movie, setMovie] = useState(null);
   const [episodes, setEpisodes] = useState([]);
   const [currentEpisode, setCurrentEpisode] = useState(null);
-  const [currentServer, setCurrentServer] = useState(0); // State lưu server hiện tại
+  const [currentServer, setCurrentServer] = useState(0);
   const [loading, setLoading] = useState(true);
   
   const [isLightOff, setIsLightOff] = useState(false);
@@ -33,7 +34,6 @@ const WatchMovie = () => {
           setMovie(data.movie);
           setEpisodes(data.episodes || []);
           
-          // Mặc định lấy server đầu tiên
           const allEps = data.episodes?.[0]?.server_data || [];
           if (allEps.length > 0) {
             let foundEp = allEps.find(e => e.slug === currentEpSlug);
@@ -50,7 +50,6 @@ const WatchMovie = () => {
   // Handle URL changes
   useEffect(() => {
       if (episodes.length > 0 && currentEpSlug) {
-          // Tìm tập trong server hiện tại
           const serverData = episodes[currentServer]?.server_data || [];
           const found = serverData.find(e => e.slug === currentEpSlug);
           if (found) setCurrentEpisode(found);
@@ -60,16 +59,13 @@ const WatchMovie = () => {
   const handleChangeEpisode = (ep) => {
     setCurrentEpisode(ep);
     setSearchParams({ tap: ep.slug });
-    // Không cuộn lên để trải nghiệm liền mạch hơn khi bấm next
   };
 
-  // --- LOGIC TÌM TẬP TIẾP THEO ---
   const getNextEpisode = () => {
       if (!episodes || !currentEpisode) return null;
       const serverData = episodes[currentServer]?.server_data || [];
       const currentIndex = serverData.findIndex(e => e.slug === currentEpisode.slug);
       
-      // Nếu tìm thấy và không phải tập cuối
       if (currentIndex !== -1 && currentIndex < serverData.length - 1) {
           return serverData[currentIndex + 1];
       }
@@ -78,7 +74,6 @@ const WatchMovie = () => {
 
   const nextEp = getNextEpisode();
 
-  // Loading Screen
   if (loading) return (
     <div className="min-h-screen bg-[#080808] flex items-center justify-center relative">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-phim-accent/10 via-transparent to-transparent animate-pulse"></div>
@@ -92,17 +87,33 @@ const WatchMovie = () => {
   if (!movie) return null;
 
   const bgImage = `${IMG_URL}${movie.poster_url || movie.thumb_url}`;
+  
+  // --- CẤU HÌNH SEO DYNAMIC ---
+  const pageTitle = `Xem phim ${movie.name} - Tập ${currentEpisode?.name || 'Full'} | PhimVietHay`;
+  const pageDesc = `Xem phim ${movie.name} (${movie.year}) tập ${currentEpisode?.name} vietsub thuyết minh chất lượng HD mới nhất tại PhimVietHay.`;
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-700 ${isLightOff ? 'bg-black' : 'bg-[#0a0a0a]'} text-white overflow-x-hidden selection:bg-phim-accent selection:text-white`}>
       
+      {/* --- 2. CHÈN THẺ HELMET VÀO ĐÂY --- */}
+      <Helmet>
+          <title>{pageTitle}</title>
+          <meta name="description" content={pageDesc} />
+          
+          {/* OG Tags */}
+          <meta property="og:title" content={pageTitle} />
+          <meta property="og:description" content={pageDesc} />
+          <meta property="og:image" content={bgImage} />
+          <meta property="og:type" content="video.episode" />
+          <meta property="og:url" content={window.location.href} />
+      </Helmet>
+
       <div className="fixed inset-0 z-0 pointer-events-none">
           <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-[100px] scale-110 transition-all duration-1000" style={{ backgroundImage: `url(${bgImage})` }} />
           <div className="absolute inset-0 bg-black/60 z-10" />
       </div>
 
       <div className={`transition-all duration-500 relative z-[100] ${isLightOff ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
-          <Header />
       </div>
       
       <div className={`fixed inset-0 bg-black/95 z-40 transition-opacity duration-700 pointer-events-none ${isLightOff ? 'opacity-100' : 'opacity-0'}`} />
@@ -141,10 +152,9 @@ const WatchMovie = () => {
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2 text-phim-accent font-bold">
                             <FaPlay className="text-xs" />
-                            <span className="text-sm uppercase tracking-wide">Đang phát tập: <span className="text-white ml-1">{currentEpisode?.name}</span></span>
+                            <span className="text-sm uppercase tracking-wide">Đang phát: <span className="text-white ml-1">{currentEpisode?.name}</span></span>
                         </div>
                         
-                        {/* --- NÚT TẬP TIẾP THEO (CHỈ HIỆN KHI CÓ TẬP SAU) --- */}
                         {nextEp && (
                             <>
                                 <span className="hidden md:inline w-px h-4 bg-white/10"></span>
@@ -193,7 +203,7 @@ const WatchMovie = () => {
                             <h3 className="font-bold text-white flex items-center gap-2">
                                 <FaList className="text-phim-accent"/> Chọn Tập
                             </h3>
-                            {/* Chuyển đổi Server (Nếu có nhiều server) */}
+                            {/* Chuyển đổi Server */}
                             <div className="flex gap-2">
                                 {episodes.map((server, idx) => (
                                     <button 

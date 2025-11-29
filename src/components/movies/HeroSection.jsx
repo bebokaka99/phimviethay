@@ -26,6 +26,11 @@ const HeroSection = ({ movies }) => {
       navigate(`/phim/${movie.slug}`);
   };
 
+  // --- LOGIC RATING CHUẨN (GIỐNG MOVIEDETAIL) ---
+  // Ưu tiên lấy trong object 'tmdb' (nếu API trả về), nếu không thì lấy ở ngoài, mặc định là 0
+  const ratingValue = movie.tmdb?.vote_average || movie.vote_average || 0;
+  const displayRating = ratingValue > 0 ? ratingValue.toFixed(1) : 'N/A';
+
   const stripHtml = (html) => {
       if (!html) return "";
       return html.replace(/<[^>]*>?/gm, '');
@@ -34,7 +39,7 @@ const HeroSection = ({ movies }) => {
   return (
     <div className="relative h-[500px] md:h-[700px] w-full text-white overflow-hidden group">
       
-      {/* BACKGROUND - Thêm key để transition mượt khi đổi ảnh */}
+      {/* BACKGROUND */}
       <div 
         key={movie._id + '-bg'} 
         className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
@@ -43,6 +48,7 @@ const HeroSection = ({ movies }) => {
          <div className="absolute inset-0 bg-phim-dark/30 backdrop-blur-[2px]" /> 
       </div>
       
+      {/* GRADIENTS */}
       <div className="absolute inset-0 bg-gradient-to-t from-phim-dark via-phim-dark/20 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-r from-phim-dark via-phim-dark/50 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-l from-phim-dark/80 via-transparent to-transparent" />
@@ -51,7 +57,7 @@ const HeroSection = ({ movies }) => {
       <div className="absolute inset-0 flex items-center justify-center pb-8 md:pb-0">
         <div className="w-full max-w-[1500px] mx-auto px-6 md:px-16 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 mt-10 md:mt-0">
             
-            {/* CỘT TRÁI: TEXT - Thêm key để re-render animation */}
+            {/* CỘT TRÁI: TEXT */}
             <div key={movie._id + '-text'} className="w-full md:w-[60%] space-y-6 z-10 animate-fade-up-custom">
                 
                 <h1 
@@ -64,12 +70,13 @@ const HeroSection = ({ movies }) => {
                 
                 <div className="flex flex-wrap items-center gap-3 text-sm md:text-base font-medium text-gray-200">
                     <span className="flex items-center gap-1 text-yellow-400 font-bold text-lg">
-                        <FaStar /> {movie.vote_average || '8.8'}
+                        {/* HIỂN THỊ RATING CHUẨN */}
+                        <FaStar /> {displayRating}
                     </span>
                     <span className="bg-white/20 px-3 py-1 rounded">
                         {movie.year}
                     </span>
-                    <span className="bg-phim-accent px-3 py-1 rounded text-white font-bold uppercase tracking-wider shadow-lg shadow-red-600/20">
+                    <span className="bg-red-600 px-3 py-1 rounded text-white font-bold uppercase tracking-wider shadow-lg shadow-red-600/20">
                         {movie.quality || 'HD'}
                     </span>
                      <span className="text-gray-300 border border-gray-500 px-3 py-1 rounded uppercase">
@@ -97,13 +104,15 @@ const HeroSection = ({ movies }) => {
                 </div>
             </div>
 
-            {/* CỘT PHẢI: POSTER - Thêm key để re-render animation */}
+            {/* CỘT PHẢI: POSTER */}
             <div key={movie._id + '-poster'} className="hidden md:flex w-full md:w-[40%] justify-end relative z-10 animate-poster-custom pr-8">
                 <div 
                     onClick={handleNavigate}
                     className="w-[260px] aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/10 transform rotate-3 hover:rotate-0 transition duration-700 ease-out group-hover:scale-105 cursor-pointer"
                 >
-                     <img src={posterImg} alt={movie.name} className="w-full h-full object-cover" />
+                     {posterImg && (
+                         <img src={posterImg} alt={movie.name} className="w-full h-full object-cover" />
+                     )}
                 </div>
             </div>
         </div>
