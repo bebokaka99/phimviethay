@@ -3,8 +3,9 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Header from '../components/layout/Header';
 import MovieGrid from '../components/movies/MovieGrid';
+import { MovieGridSkeleton } from '../components/common/Skeleton'; // Import Skeleton
 import { getMoviesBySlug, getMenuData } from '../services/movieService';
-import { FaFilter, FaCheck, FaTimes, FaTags, FaTrashAlt, FaSortAmountDown, FaLayerGroup, FaGlobe, FaCalendarAlt, FaFilm, FaInfoCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaFilter, FaCheck, FaTimes, FaTags, FaTrashAlt, FaSortAmountDown, FaLayerGroup, FaGlobe, FaCalendarAlt, FaFilm, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const FILTER_DATA = {
     sort: [
@@ -17,11 +18,6 @@ const FILTER_DATA = {
         { name: 'Phim bộ', value: 'phim-bo' },
         { name: 'Hoạt hình', value: 'hoat-hinh' },
         { name: 'TV Shows', value: 'tv-shows' }
-    ],
-    status: [
-        { name: 'Hoàn thành', value: 'phim-hoan-thanh' },
-        { name: 'Đang chiếu', value: 'phim-dang-chieu' },
-        { name: 'Sắp chiếu', value: 'phim-sap-chieu' }
     ]
 };
 
@@ -33,20 +29,22 @@ const Catalog = ({ group }) => {
   const navigate = useNavigate();
   
   const currentPage = parseInt(searchParams.get('page')) || 1;
+  
+  // State Data
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState('');
   const [totalPages, setTotalPages] = useState(1);
-
+  
+  // State UI
+  const [title, setTitle] = useState('');
   const [menuData, setMenuData] = useState({ theLoai: [], quocGia: [] });
   const [showFilter, setShowFilter] = useState(false);
   const [activeTags, setActiveTags] = useState([]);
-
   const [selectedFilters, setSelectedFilters] = useState({
-      category: [], country: [], year: '', type: '', status: '', sort: 'modified.time'
+      category: [], country: [], year: '', type: '', sort: 'modified.time'
   });
 
-  // 1. Load Menu (Chạy 1 lần)
+  // 1. Load Menu (Chạy 1 lần duy nhất)
   useEffect(() => {
       const fetchMenu = async () => {
           const data = await getMenuData();
@@ -55,17 +53,14 @@ const Catalog = ({ group }) => {
       fetchMenu();
   }, []);
 
-  // 2. Sync URL -> UI State
+  // 2. Sync URL -> UI State (Để highlight nút lọc)
   useEffect(() => {
       const parseArray = (str) => str ? str.split(',') : [];
-      const newFilters = { category: [], country: [], type: '', year: '', status: '', sort: 'modified.time' };
+      const newFilters = { category: [], country: [], type: '', year: '', sort: 'modified.time' };
 
       if (group === 'the-loai') newFilters.category = [slug];
       else if (group === 'quoc-gia') newFilters.country = [slug];
-      else if (group === 'danh-sach') {
-          if (['phim-hoan-thanh', 'phim-dang-chieu', 'phim-sap-chieu'].includes(slug)) newFilters.status = slug;
-          else newFilters.type = slug;
-      }
+      else if (group === 'danh-sach') newFilters.type = slug;
 
       const qCat = searchParams.get('category');
       const qCountry = searchParams.get('country');
@@ -76,14 +71,13 @@ const Catalog = ({ group }) => {
       newFilters.category = [...new Set(newFilters.category)];
       newFilters.country = [...new Set(newFilters.country)];
 
-      if (searchParams.get('year')) newFilters.year = searchParams.get('year');
       if (searchParams.get('sort_field')) newFilters.sort = searchParams.get('sort_field');
-      if (searchParams.get('status')) newFilters.status = searchParams.get('status');
+      if (searchParams.get('year')) newFilters.year = searchParams.get('year');
       
       setSelectedFilters(newFilters);
   }, [group, slug, searchParams]);
 
-  // 3. FETCH DATA (TỐI ƯU: BỎ menuData KHỎI DEPENDENCY)
+  // 3. FETCH DATA (QUAN TRỌNG: CHỈ CHẠY KHI URL THAY ĐỔI - KHÔNG PHỤ THUỘC MENUDATA)
   useEffect(() => {
     window.scrollTo(0, 0);
     const fetchData = async () => {
@@ -93,21 +87,19 @@ const Catalog = ({ group }) => {
             let apiType = 'danh-sach';
             const filterParams = {};
 
+            // Lấy params từ URL
             const urlType = group === 'danh-sach' ? slug : searchParams.get('type');
-            const urlCats = group === 'the-loai' ? [slug, ...(searchParams.get('category')?.split(',') || [])] : (searchParams.get('category')?.split(',') || []);
-            const urlCountries = group === 'quoc-gia' ? [slug, ...(searchParams.get('country')?.split(',') || [])] : (searchParams.get('country')?.split(',') || []);
-            const urlStatus = searchParams.get('status');
+            const urlCats = searchParams.get('category') ? searchParams.get('category').split(',') : [];
+            const urlCountries = searchParams.get('country') ? searchParams.get('country').split(',') : [];
 
-            if (group === 'danh-sach' && ['phim-hoan-thanh','phim-dang-chieu', 'phim-sap-chieu'].includes(slug)) {
-                 // Status handled by logic below
-            }
+            if (group === 'the-loai') urlCats.push(slug);
+            if (group === 'quoc-gia') urlCountries.push(slug);
 
             const uniqueCats = [...new Set(urlCats)];
             const uniqueCountries = [...new Set(urlCountries)];
 
             // Priority Logic
-            if (urlStatus) { apiSlug = urlStatus; apiType = 'danh-sach'; }
-            else if (urlType) { apiSlug = urlType; apiType = 'danh-sach'; }
+            if (urlType && urlType !== 'phim-moi') { apiSlug = urlType; apiType = 'danh-sach'; } 
             else if (uniqueCats.length > 0) { apiSlug = uniqueCats[0]; apiType = 'the-loai'; }
             else if (uniqueCountries.length > 0) { apiSlug = uniqueCountries[0]; apiType = 'quoc-gia'; }
 
@@ -120,16 +112,13 @@ const Catalog = ({ group }) => {
             if (searchParams.get('year')) filterParams.year = searchParams.get('year');
             if (searchParams.get('sort_field')) filterParams.sort_field = searchParams.get('sort_field');
 
-            // Gọi API (Không chờ menuData)
+            // GỌI API
             const data = await getMoviesBySlug(apiSlug, currentPage, apiType, filterParams);
             
             if (data?.data?.items) {
-                let finalMovies = data.data.items;
-                if (urlStatus) finalMovies = finalMovies.filter(movie => movie.status === (urlStatus === 'phim-hoan-thanh' ? 'completed' : 'ongoing'));
-                setMovies(finalMovies);
-                
-                // Set Title mặc định từ API trước
-                setTitle(data.data.titlePage || 'Danh sách phim');
+                setMovies(data.data.items);
+                // Set title tạm thời từ API (để có cái hiển thị ngay)
+                if(!title) setTitle(data.data.titlePage || 'Danh sách phim');
 
                 const pagination = data.data.params?.pagination;
                 if (pagination) setTotalPages(Math.ceil(pagination.totalItems / pagination.totalItemsPerPage));
@@ -142,50 +131,64 @@ const Catalog = ({ group }) => {
     fetchData();
   }, [slug, currentPage, group, searchParams]); // <--- BỎ menuData RA KHỎI ĐÂY
 
-  // 4. EFFECT RIÊNG ĐỂ UPDATE TITLE/TAGS KHI CÓ MENU DATA (UI ONLY)
+  // 4. UPDATE TITLE & TAGS (CHẠY RIÊNG KHI CÓ MENU DATA - UI ONLY)
   useEffect(() => {
-      // Chỉ chạy khi menuData đã load xong
-      if (menuData.theLoai.length === 0) return;
-
-      const urlType = group === 'danh-sach' && !['phim-hoan-thanh','phim-dang-chieu','phim-sap-chieu'].includes(slug) ? slug : searchParams.get('type');
-      const urlStatus = searchParams.get('status') || (['phim-hoan-thanh','phim-dang-chieu','phim-sap-chieu'].includes(slug) ? slug : '');
-      
+      // Logic tạo Title đẹp (cần menuData để map slug -> tên tiếng Việt)
+      const urlType = group === 'danh-sach' ? slug : searchParams.get('type');
       const urlCats = searchParams.get('category') ? searchParams.get('category').split(',') : [];
-      if (group === 'the-loai') urlCats.push(slug);
-      
       const urlCountries = searchParams.get('country') ? searchParams.get('country').split(',') : [];
+      
+      if (group === 'the-loai') urlCats.push(slug);
       if (group === 'quoc-gia') urlCountries.push(slug);
 
       const tags = [];
-      if(urlStatus) tags.push({ label: FILTER_DATA.status.find(s=>s.value===urlStatus)?.name });
-      if(urlType && urlType !== 'phim-moi') tags.push({ label: FILTER_DATA.type.find(t=>t.value===urlType)?.name });
-      
-      [...new Set(urlCats)].forEach(c => tags.push({ label: menuData.theLoai.find(i=>i.slug===c)?.name || c }));
-      [...new Set(urlCountries)].forEach(c => tags.push({ label: menuData.quocGia.find(i=>i.slug===c)?.name || c }));
+      const titleParts = [];
 
-      if(searchParams.get('year')) tags.push({ label: `Năm ${searchParams.get('year')}` });
+      if(urlType && urlType !== 'phim-moi') {
+          const name = FILTER_DATA.type.find(t=>t.value===urlType)?.name;
+          if(name) { tags.push({ label: name }); titleParts.push(name); }
+      }
+
+      if (menuData.theLoai.length > 0) {
+           [...new Set(urlCats)].forEach(c => {
+               const name = menuData.theLoai.find(i=>i.slug===c)?.name;
+               if(name) { tags.push({ label: name }); titleParts.push(name); }
+           });
+           [...new Set(urlCountries)].forEach(c => {
+               const name = menuData.quocGia.find(i=>i.slug===c)?.name;
+               if(name) { tags.push({ label: name }); titleParts.push(name); }
+           });
+      }
+
+      if(searchParams.get('year')) {
+          const y = searchParams.get('year');
+          tags.push({ label: `Năm ${y}` });
+          titleParts.push(`Năm ${y}`);
+      }
 
       const validTags = tags.filter(t => t && t.label);
       setActiveTags(validTags);
-      
-      if(validTags.length > 0) setTitle(`Kết quả lọc (${validTags.length} điều kiện)`);
+
+      // Cập nhật Title trang nếu có điều kiện lọc
+      if(titleParts.length > 0) {
+          setTitle(titleParts.join(' • '));
+      } else if (!title) {
+          setTitle('Danh sách phim');
+      }
 
   }, [menuData, searchParams, slug, group]);
 
 
-  // --- HANDLERS (Giữ nguyên) ---
+  // --- HANDLERS ---
   const handleApplyFilter = () => {
       let path = '/danh-sach/';
       path += selectedFilters.type ? selectedFilters.type : 'phim-moi';
-      if (selectedFilters.status) path = `/danh-sach/${selectedFilters.status}`; // Ưu tiên status làm path nếu có
       
       const params = new URLSearchParams();
       if (selectedFilters.category.length > 0) params.set('category', selectedFilters.category.join(','));
       if (selectedFilters.country.length > 0) params.set('country', selectedFilters.country.join(','));
       if (selectedFilters.year) params.set('year', selectedFilters.year);
       if (selectedFilters.sort) params.set('sort_field', selectedFilters.sort);
-      // Nếu status không làm path (do logic trên) thì đẩy vào params
-      if (selectedFilters.status && !path.includes(selectedFilters.status)) params.set('status', selectedFilters.status);
       
       params.set('page', '1');
       navigate(`${path}?${params.toString()}`);
@@ -193,7 +196,7 @@ const Catalog = ({ group }) => {
   };
 
   const handleClearFilter = () => {
-      setSelectedFilters({ category: [], country: [], year: '', type: '', status: '', sort: 'modified.time' });
+      setSelectedFilters({ category: [], country: [], year: '', type: '', sort: 'modified.time' });
       navigate('/danh-sach/phim-moi');
       setShowFilter(false);
   };
@@ -217,7 +220,7 @@ const Catalog = ({ group }) => {
       }
   };
 
-  // UI Components (Giữ nguyên)
+  // UI Components
   const FilterPill = ({ label, active, onClick }) => (
       <button onClick={onClick} className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 border flex items-center justify-center gap-2 whitespace-nowrap ${active ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-900/30' : 'bg-[#1a1a1a] text-gray-400 border-white/5 hover:border-white/30 hover:text-white hover:bg-white/5'}`}>
           {label} {active && <FaCheck className="text-[10px]" />}
@@ -268,7 +271,6 @@ const Catalog = ({ group }) => {
           {/* PANEL BỘ LỌC */}
           <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showFilter ? 'max-h-[3000px] opacity-100 mb-12' : 'max-h-0 opacity-0 mb-0'}`}>
               <div className="bg-[#111] border border-white/10 p-6 md:p-8 rounded-2xl shadow-2xl">
-                  <FilterRow label="Tình trạng" icon={<FaInfoCircle/>} items={FILTER_DATA.status} activeValue={selectedFilters.status} onSelect={(val) => setSingleFilter('status', val)} />
                   <FilterRow label="Loại phim" icon={<FaFilm/>} items={FILTER_DATA.type} activeValue={selectedFilters.type} onSelect={(val) => setSingleFilter('type', val)} />
                   <FilterRow label="Quốc gia" icon={<FaGlobe/>} items={menuData.quocGia} activeValue={selectedFilters.country} onSelect={(val) => toggleArrayFilter('country', val)} isMulti={true} gridClass="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2" />
                   <FilterRow label="Thể loại" icon={<FaLayerGroup/>} items={menuData.theLoai} activeValue={selectedFilters.category} onSelect={(val) => toggleArrayFilter('category', val)} isMulti={true} gridClass="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2" />
@@ -278,14 +280,16 @@ const Catalog = ({ group }) => {
                   <div className="mt-8 flex justify-center md:justify-end gap-4 border-t border-white/10 pt-6">
                       <button onClick={handleClearFilter} className="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-red-500 hover:text-white border border-red-900/30 hover:bg-red-900/50 transition"><FaTrashAlt /> Reset</button>
                       <button onClick={() => setShowFilter(false)} className="px-8 py-3 rounded-full font-bold text-gray-400 hover:text-white bg-[#1f1f1f] hover:bg-[#2a2a2a] transition">Đóng</button>
-                      <button onClick={handleApplyFilter} className="bg-red-600 hover:bg-red-700 text-white px-10 py-3 rounded-full font-bold shadow-lg shadow-red-900/20 transform hover:-translate-y-0.5 transition flex items-center gap-2"><FaCheck /> LỌC KẾT QUẢ</button>
+                      <button onClick={handleApplyFilter} className="bg-red-600 hover:bg-red-700 text-white px-10 py-3 rounded-full font-bold shadow-lg shadow-red-900/20 transform hover:-translate-y-0.5 transition flex items-center gap-2"><FaCheck />Lọc</button>
                   </div>
               </div>
           </div>
 
-          {/* LIST PHIM */}
+          {/* LIST PHIM - THAY THẾ LOADING BẰNG SKELETON */}
           {loading ? (
-              <div className="flex justify-center py-40"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div></div>
+              <div className="py-10">
+                  <MovieGridSkeleton />
+              </div>
           ) : (
               <>
                   <MovieGrid movies={movies} />
