@@ -13,6 +13,7 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Favorites from "./pages/Favorites";
 // ---------------------------------
+import History from "./pages/History";
 
 export const router = createBrowserRouter([
   {
@@ -26,7 +27,7 @@ export const router = createBrowserRouter([
       { path: "/quoc-gia/:slug", element: <Catalog group="quoc-gia" /> },
       { path: "/danh-sach/:slug", element: <Catalog group="danh-sach" /> },
       { path: "/nam-phat-hanh/:slug", element: <Catalog group="nam-phat-hanh" /> },
-      
+
       // Các trang không có slug
       { path: "/the-loai", element: <Catalog group="danh-sach" /> },
       { path: "/quoc-gia", element: <Catalog group="danh-sach" /> },
@@ -35,10 +36,15 @@ export const router = createBrowserRouter([
       // Auth & User
       { path: "/ho-so", element: <Profile /> },
       { path: "/tu-phim", element: <Favorites /> }, // Nhớ import Favorites
+      {
+        path: "/lich-su",
+        element: <History />,
+      },
     ],
     errorElement: <NotFound />,
   },
-  
+
+
   // Login/Register thường đứng riêng, không cần Header/Footer (hoặc tùy bạn)
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },

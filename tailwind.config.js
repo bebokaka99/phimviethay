@@ -8,18 +8,18 @@ export default {
     extend: {
       colors: {
         // 1. Nền chính trong suốt để ăn theo Gradient của Body
-        'phim-dark': 'transparent', 
+        'phim-dark': 'transparent',
 
         // 2. Màu đỏ thương hiệu (Netflix Red)
         'phim-accent': '#e50914',
 
         // 3. Các màu nền phụ cho Card, Modal, Sidebar (Bán trong suốt)
         // Dùng màu đen pha chút xanh than để đồng bộ với body
-        'phim-card': 'rgba(0, 0, 0, 0.6)',       // Nền card phim (Slate-900 alpha)
-        'phim-modal': 'rgba(11, 13, 20, 0.95)',     // Nền Modal đậm hơn
-        'phim-glass': 'rgba(255, 255, 255, 0.05)',  // Hiệu ứng kính sáng nhẹ
+        'phim-card': 'rgba(20, 5, 5, 0.6)',
+        'phim-modal': 'rgba(15, 3, 3, 0.95)',
+        'phim-glass': 'rgba(255, 200, 200, 0.05)',
       },
-      
+
       // 4. Animation mượt mà hơn
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out forwards',
@@ -36,17 +36,17 @@ export default {
           '100%': { opacity: '1' },
         },
         fadeInDown: {
-            '0%': { opacity: '0', transform: 'translateY(-20px)' },
-            '100%': { opacity: '1', transform: 'translateY(0)' },
+          '0%': { opacity: '0', transform: 'translateY(-20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         fadeInUp: {
-            '0%': { opacity: '0', transform: 'translateY(30px)' }, // Tăng khoảng cách trượt lên
-            '100%': { opacity: '1', transform: 'translateY(0)' },
+          '0%': { opacity: '0', transform: 'translateY(30px)' }, // Tăng khoảng cách trượt lên
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         shake: {
-            '0%, 100%': { transform: 'translateX(0)' },
-            '25%': { transform: 'translateX(-5px)' },
-            '75%': { transform: 'translateX(5px)' },
+          '0%, 100%': { transform: 'translateX(0)' },
+          '25%': { transform: 'translateX(-5px)' },
+          '75%': { transform: 'translateX(5px)' },
         }
       }
     },

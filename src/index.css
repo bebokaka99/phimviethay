@@ -2,74 +2,87 @@
 @tailwind components;
 @tailwind utilities;
 
-/* --- 1. TÙY CHỈNH SCROLLBAR --- */
+/* --- 1. TÙY CHỈNH SCROLLBAR (MÀU ĐỎ) --- */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
-  background: transparent; /* Để trong suốt để ăn nhập với nền mới */
-}
-::-webkit-scrollbar-thumb {
-  background: #333; 
-  border-radius: 4px;
-  border: 1px solid #0b0d14; /* Tạo viền nhỏ giúp tách biệt */
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #e50914;
+  background: #1a0505;
+  /* Nền rãnh cuộn màu đỏ đen */
 }
 
-/* --- 2. NỀN TỔNG THỂ (DEEP AMBIENT STYLE) --- */
+::-webkit-scrollbar-thumb {
+  background: #7f1d1d;
+  /* Thanh cuộn màu đỏ đậm */
+  border-radius: 4px;
+  border: 1px solid #450a0a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #dc2626;
+  /* Hover sáng rực */
+}
+
+/* --- 2. NỀN TỔNG THỂ (RED CINEMA GRADIENT) --- */
 body {
   margin: 0;
   padding: 0;
-  color: #f5f5f5;
-  
-  /* NỀN CHÍNH: Đen tuyền */
-  background-color: #000000;
-  
-  /* HIỆU ỨNG: Chỉ dùng ánh sáng Đỏ và Trắng nhẹ, bỏ hết xanh/tím */
-  background-image: 
-    /* Góc trái trên: Đỏ thương hiệu mờ */
-    radial-gradient(circle at 0% 0%, rgba(220, 38, 38, 0.2) 0%, transparent 40%),
-    /* Góc phải dưới: Đỏ đậm mờ */
-    radial-gradient(circle at 100% 100%, rgba(153, 27, 27, 0.15) 0%, transparent 40%),
-    /* Giữa: Vignette tối dần ra xa */
-    radial-gradient(circle at 50% 50%, rgba(20, 20, 20, 1) 0%, rgba(0, 0, 0, 1) 100%);
+  color: #fff1f2;
+  /* Chữ màu trắng hơi phớt hồng nhẹ cho hợp nền */
 
+  /* MÀU NỀN CHÍNH: Đen pha đỏ */
+  background-color: #0f0202;
+
+  /* HIỆU ỨNG GRADIENT: SÁNG -> TỐI */
+  background-image:
+    /* Lớp 1: Ánh sáng đỏ rực ở trên cùng (Sáng) */
+    linear-gradient(to bottom, rgba(185, 28, 28, 0.15) 0%, transparent 40%),
+
+    /* Lớp 2: Chuyển màu từ Đỏ Thẫm -> Đen (Chính) */
+    linear-gradient(180deg, #280505 0%, #0a0000 100%);
+
+  /* Cố định nền để khi cuộn nội dung trôi qua rất đẹp */
   background-attachment: fixed;
   background-size: cover;
-  
+  background-repeat: no-repeat;
+
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-/* --- 3. TIỆN ÍCH --- */
+/* --- CÁC CLASS KHÁC GIỮ NGUYÊN --- */
 .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  display: none;
 }
 
-/* --- 4. ANIMATION CƠ BẢN (GIỮ NGUYÊN) --- */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
-
-/* --- 5. ANIMATION CHO HERO SECTION (GIỮ NGUYÊN HIỆU ỨNG MƯỢT) --- */
 
 @keyframes fadeInUpCustom {
   from {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -77,46 +90,57 @@ body {
 }
 
 .animate-fade-up-custom {
-  animation: fadeInUpCustom 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; 
+  animation: fadeInUpCustom 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 @keyframes posterFadeIn {
-    0% { 
-        opacity: 0; 
-        transform: translateY(20px) scale(0.95) rotate(0deg); 
-    }
-    100% { 
-        opacity: 1; 
-        transform: translateY(0) scale(1) rotate(3deg); 
-    }
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95) rotate(0deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(3deg);
+  }
 }
 
 .animate-poster-custom {
-    animation: posterFadeIn 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: posterFadeIn 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-/* --- 6. ANIMATION TOAST (GIỮ NGUYÊN) --- */
 @keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in-down {
-    animation: fadeInDown 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: fadeInDown 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-/* Shake Effect */
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
 }
+
 .animate-shake {
   animation: shake 0.3s ease-in-out;
 }

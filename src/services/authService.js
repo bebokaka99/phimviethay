@@ -9,7 +9,12 @@ const USER_URL = `${BASE_URL}/user`;
 // Helper lấy header
 const getAuthHeader = () => {
     const token = localStorage.getItem('token');
-    return { headers: { Authorization: `Bearer ${token}` } };
+    return { 
+        headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json' // <--- THÊM DÒNG NÀY CHO CHẮC
+        } 
+    };
 };
 
 // --- AUTH API ---
@@ -79,6 +84,7 @@ export const toggleFavorite = async (movie) => {
             await axios.delete(`${USER_URL}/favorites/${movie.slug}`, getAuthHeader());
             return false; 
         } else {
+            // Gửi full data phim lên server
             await axios.post(`${USER_URL}/favorites`, {
                 slug: movie.slug,
                 name: movie.name,
@@ -107,14 +113,15 @@ export const updateProfile = async (data) => {
     }
 };
 
-// --- HISTORY API (CÁI BẠN ĐANG THIẾU) ---
+// --- HISTORY API (CHỈ GIỮ 1 HÀM DUY NHẤT NÀY) ---
 
-export const setWatchHistory = async (movieSlug, episodeSlug) => {
+export const setWatchHistory = async (data) => { // <--- Nhận object data
     const token = localStorage.getItem('token');
-    if (!token) return; // Chưa đăng nhập thì bỏ qua, ko lỗi
+    if (!token) return;
 
     try {
-        await axios.post(`${USER_URL}/history`, { movieSlug, episodeSlug }, getAuthHeader());
+        // Gửi nguyên cục object data lên server
+        await axios.post(`${USER_URL}/history`, data, getAuthHeader());
     } catch (error) {
         console.error("Lỗi ghi lịch sử:", error);
     }
@@ -129,5 +136,16 @@ export const getWatchHistory = async () => {
         return response.data;
     } catch (error) {
         return [];
+    }
+};
+
+export const clearWatchHistory = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+        await axios.delete(`${USER_URL}/history`, getAuthHeader());
+    } catch (error) {
+        throw error;
     }
 };
