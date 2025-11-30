@@ -23,29 +23,26 @@
 body {
   margin: 0;
   padding: 0;
-  color: white;
+  color: #f5f5f5;
   
-  /* THAY ĐỔI: Không dùng đen tuyền (#050505) nữa */
-  /* Dùng màu Than Xanh Đậm (Deep Charcoal Blue) tạo cảm giác cao cấp */
-  background-color: #0b0d14; 
+  /* NỀN CHÍNH: Đen tuyền */
+  background-color: #000000;
   
-  /* HIỆU ỨNG ÁNH SÁNG MÔI TRƯỜNG (AMBIENT) */
+  /* HIỆU ỨNG: Chỉ dùng ánh sáng Đỏ và Trắng nhẹ, bỏ hết xanh/tím */
   background-image: 
-    /* 1. Đốm sáng Đỏ (Thương hiệu) ở góc trái trên - Mờ ảo */
-    radial-gradient(circle at 10% 10%, rgba(229, 9, 20, 0.08) 0%, transparent 40%), 
-    
-    /* 2. Đốm sáng Tím Than (Chiều sâu) ở góc phải dưới */
-    radial-gradient(circle at 90% 90%, rgba(88, 28, 135, 0.15) 0%, transparent 40%),
-    
-    /* 3. Đốm sáng nhẹ ở giữa để nội dung chính nổi bật hơn */
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 60%);
-    
-  background-attachment: fixed; /* Cố định nền để tạo hiệu ứng trôi */
+    /* Góc trái trên: Đỏ thương hiệu mờ */
+    radial-gradient(circle at 0% 0%, rgba(220, 38, 38, 0.2) 0%, transparent 40%),
+    /* Góc phải dưới: Đỏ đậm mờ */
+    radial-gradient(circle at 100% 100%, rgba(153, 27, 27, 0.15) 0%, transparent 40%),
+    /* Giữa: Vignette tối dần ra xa */
+    radial-gradient(circle at 50% 50%, rgba(20, 20, 20, 1) 0%, rgba(0, 0, 0, 1) 100%);
+
+  background-attachment: fixed;
   background-size: cover;
   
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden; /* Chặn cuộn ngang tuyệt đối */
+  overflow-x: hidden;
 }
 
 /* --- 3. TIỆN ÍCH --- */

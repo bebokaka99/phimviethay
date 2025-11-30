@@ -15,7 +15,7 @@ export default {
 
         // 3. Các màu nền phụ cho Card, Modal, Sidebar (Bán trong suốt)
         // Dùng màu đen pha chút xanh than để đồng bộ với body
-        'phim-card': 'rgba(15, 23, 42, 0.6)',       // Nền card phim (Slate-900 alpha)
+        'phim-card': 'rgba(0, 0, 0, 0.6)',       // Nền card phim (Slate-900 alpha)
         'phim-modal': 'rgba(11, 13, 20, 0.95)',     // Nền Modal đậm hơn
         'phim-glass': 'rgba(255, 255, 255, 0.05)',  // Hiệu ứng kính sáng nhẹ
       },

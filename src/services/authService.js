@@ -3,12 +3,10 @@ import axios from 'axios';
 // Vite sẽ tự động chọn link localhost hay link thật dựa vào môi trường chạy
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// URL Auth
 const AUTH_URL = `${BASE_URL}/auth`;
-// URL User (Profile/Favorites)
 const USER_URL = `${BASE_URL}/user`;
 
-// Helper lấy header chứa Token
+// Helper lấy header
 const getAuthHeader = () => {
     const token = localStorage.getItem('token');
     return { headers: { Authorization: `Bearer ${token}` } };
@@ -84,7 +82,11 @@ export const toggleFavorite = async (movie) => {
             await axios.post(`${USER_URL}/favorites`, {
                 slug: movie.slug,
                 name: movie.name,
-                thumb: movie.thumb_url
+                thumb: movie.thumb_url,
+                quality: movie.quality,
+                year: movie.year,
+                episode_current: movie.episode_current,
+                vote_average: movie.vote_average
             }, getAuthHeader());
             return true; 
         }
@@ -93,18 +95,39 @@ export const toggleFavorite = async (movie) => {
     }
 };
 
-// --- HÀM MỚI: UPDATE PROFILE ---
 export const updateProfile = async (data) => {
     try {
         const response = await axios.put(`${USER_URL}/profile`, data, getAuthHeader());
-        
-        // Nếu server trả về thông tin user mới, cập nhật ngay vào localStorage
-        // Để Header và các trang khác hiển thị thông tin mới mà không cần đăng nhập lại
         if (response.data.user) {
             localStorage.setItem('user', JSON.stringify(response.data.user));
         }
         return response.data;
     } catch (error) {
         throw error.response?.data?.message || 'Lỗi cập nhật';
+    }
+};
+
+// --- HISTORY API (CÁI BẠN ĐANG THIẾU) ---
+
+export const setWatchHistory = async (movieSlug, episodeSlug) => {
+    const token = localStorage.getItem('token');
+    if (!token) return; // Chưa đăng nhập thì bỏ qua, ko lỗi
+
+    try {
+        await axios.post(`${USER_URL}/history`, { movieSlug, episodeSlug }, getAuthHeader());
+    } catch (error) {
+        console.error("Lỗi ghi lịch sử:", error);
+    }
+};
+
+export const getWatchHistory = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return [];
+
+    try {
+        const response = await axios.get(`${USER_URL}/history`, getAuthHeader());
+        return response.data;
+    } catch (error) {
+        return [];
     }
 };
