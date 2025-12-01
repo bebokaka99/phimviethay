@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet-async';
 import Header from '../components/layout/Header';
 import MovieRow from '../components/movies/MovieRow'; 
 import { getMovieDetail, getMoviesBySlug, getMoviePeoples, getMovieImages, IMG_URL } from '../services/movieService'; 
-// Import thêm getWatchHistory và getCurrentUser
 import { checkFavoriteStatus, toggleFavorite, getWatchHistory, getCurrentUser } from '../services/authService';
 import { getTmdbDetails } from '../services/tmdbService';
 import CommentSection from '../components/comments/CommentSection'; 
@@ -37,20 +36,21 @@ const MovieDetail = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   
-  // --- STATE MỚI: LƯU TRẠNG THÁI XEM DỞ ---
-  const [continueEp, setContinueEp] = useState(null); 
+  // State xem tiếp
+  const [continueEp, setContinueEp] = useState(null);
 
   const castRef = useRef(null);
   const galleryRef = useRef(null);
 
   useEffect(() => { window.scrollTo(0, 0); }, [slug]);
 
+  // 1. FETCH DATA
   useEffect(() => {
     const fetchDetail = async () => {
         setLoading(true);
         setTmdbData(null);
         setRelatedMovies([]); 
-        setContinueEp(null); // Reset trạng thái xem tiếp
+        setContinueEp(null);
 
         try {
             const data = await getMovieDetail(slug);
@@ -58,6 +58,7 @@ const MovieDetail = () => {
             if (data?.status && data?.movie) {
                 setMovie(data.movie);
                 
+                // --- GỌI TMDB ---
                 const tmdbId = data.movie.tmdb?.id;
                 const imdbId = data.movie.imdb?.id;
                 const originalName = data.movie.origin_name;
@@ -67,9 +68,11 @@ const MovieDetail = () => {
                     if (info) setTmdbData(info);
                 });
 
+                // --- GỌI API OPHIM (CAST & GALLERY) ---
                 getMoviePeoples(slug).then(res => { if(res && res.length > 0) setCasts(res); });
                 getMovieImages(slug).then(res => { if(res && res.length > 0) setGallery(res); });
 
+                // --- PHIM LIÊN QUAN ---
                 if (data.movie.category && data.movie.category.length > 0) {
                     const randomCat = data.movie.category[Math.floor(Math.random() * data.movie.category.length)];
                     getMoviesBySlug(randomCat.slug, 1, 'the-loai').then(res => {
@@ -80,25 +83,22 @@ const MovieDetail = () => {
                     });
                 }
 
-                // Check Favorite
+                // --- FAVORITE STATUS ---
                 const favStatus = await checkFavoriteStatus(data.movie.slug);
                 setIsFavorite(favStatus);
 
-                // --- LOGIC KIỂM TRA LỊCH SỬ XEM (MỚI) ---
+                // --- CHECK HISTORY (XEM TIẾP) ---
                 const currentUser = getCurrentUser();
                 if (currentUser) {
-                    // Lấy toàn bộ lịch sử (có thể tối ưu bằng API riêng lấy 1 phim, nhưng tạm dùng cái này)
                     const histories = await getWatchHistory();
                     const historyItem = histories.find(h => h.movie_slug === data.movie.slug);
-                    
                     if (historyItem) {
                         setContinueEp({
                             slug: historyItem.episode_slug,
-                            name: historyItem.episode_name // VD: "Tập 2"
+                            name: historyItem.episode_name 
                         });
                     }
                 }
-                // ----------------------------------------
 
                 const eps = data.episodes || [];
                 setEpisodes(eps);
@@ -114,8 +114,11 @@ const MovieDetail = () => {
 
   const handleToggleFavorite = async () => {
       try {
+          // Lấy rating chuẩn để lưu vào DB
+          const ratingToSave = tmdbData?.rating || movie.tmdb?.vote_average || movie.vote_average || 0;
+          
           const newStatus = await toggleFavorite({
-              slug: movie.slug, name: movie.name, thumb_url: movie.thumb_url, quality: movie.quality, year: movie.year, episode_current: movie.episode_current, vote_average: tmdbData?.rating || movie.vote_average || '0'
+              slug: movie.slug, name: movie.name, thumb_url: movie.thumb_url, quality: movie.quality, year: movie.year, episode_current: movie.episode_current, vote_average: ratingToSave
           });
           setIsFavorite(newStatus);
           showToast(newStatus ? 'Đã thêm vào danh sách yêu thích ❤️' : 'Đã xóa khỏi danh sách yêu thích 💔');
@@ -125,20 +128,16 @@ const MovieDetail = () => {
       }
   };
 
-  // --- SỬA LOGIC NÚT XEM ---
   const handleWatchNow = () => {
       if (episodes.length > 0 && episodes[0].server_data.length > 0) {
-          // Nếu có lịch sử xem -> Xem tiếp tập đó
+          // Nếu có lịch sử -> xem tiếp, không thì xem tập đầu
           if (continueEp) {
               navigate(`/xem-phim/${movie.slug}?tap=${continueEp.slug}`);
           } else {
-              // Nếu chưa xem -> Xem tập đầu tiên
               const firstEp = episodes[0].server_data[0];
               navigate(`/xem-phim/${movie.slug}?tap=${firstEp.slug}`);
           }
-      } else {
-          showToast('Phim đang cập nhật, vui lòng quay lại sau!');
-      }
+      } else { showToast('Phim đang cập nhật...'); }
   };
 
   const handleShare = () => { navigator.clipboard.writeText(window.location.href); showToast('Đã sao chép liên kết!'); };
@@ -146,7 +145,7 @@ const MovieDetail = () => {
   const handleWatchTrailer = () => {
       if (tmdbData?.trailer) window.open(`https://www.youtube.com/watch?v=${tmdbData.trailer}`, '_blank');
       else if (movie.trailer_url && movie.trailer_url.includes('youtube')) window.open(movie.trailer_url, '_blank');
-      else showToast('Chưa có trailer cho phim này');
+      else showToast('Chưa có trailer');
   };
 
   const getInitials = (name) => { if (!name) return "?"; const p = name.trim().split(' '); if (p.length === 1) return p[0].charAt(0); return (p[0].charAt(0) + p[p.length - 1].charAt(0)).toUpperCase(); };
@@ -158,10 +157,16 @@ const MovieDetail = () => {
   if (loading) return <div className="min-h-screen bg-phim-dark flex items-center justify-center text-white"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-phim-accent"></div></div>;
   if (!movie) return <div className="min-h-screen bg-phim-dark text-white flex flex-col items-center justify-center gap-4">Không tìm thấy phim</div>;
 
+  // --- LOGIC HIỂN THỊ ---
   const backdropImg = tmdbData?.backdrop || (movie.poster_url ? `${IMG_URL}${movie.poster_url}` : `${IMG_URL}${movie.thumb_url}`);
   const posterImg = `${IMG_URL}${movie.thumb_url}`;
-  const displayRating = tmdbData?.rating || (movie.vote_average > 0 ? movie.vote_average : 8.5);
-  const displayVotes = tmdbData?.vote_count ? `(${tmdbData.vote_count} votes)` : '';
+  
+  // Rating: Ưu tiên TMDB -> OPhim (tmdb object) -> OPhim root -> 0
+  const ratingVal = tmdbData?.rating || movie.tmdb?.vote_average || movie.vote_average || 0;
+  const displayRating = ratingVal > 0 ? Number(ratingVal).toFixed(1) : 'N/A';
+  
+  const displayVotes = tmdbData?.vote_count ? `(${tmdbData.vote_count} votes)` : (movie.tmdb?.vote_count ? `(${movie.tmdb.vote_count} votes)` : '');
+  
   const movieContentClean = stripHtml(movie.content);
   const pageTitle = `${movie.name} (${movie.year}) - Xem Phim HD`;
 
@@ -172,8 +177,10 @@ const MovieDetail = () => {
         <meta name="description" content={movieContentClean.substring(0, 150)} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:image" content={posterImg} />
+        <meta property="og:type" content="video.movie" />
       </Helmet>
 
+      <Header />
       {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg('')} />}
       
       {/* HERO */}
@@ -188,10 +195,7 @@ const MovieDetail = () => {
               <div className="flex flex-col md:flex-row gap-6 md:gap-14 items-center md:items-start">
                   <div className="w-[150px] md:w-[320px] flex-shrink-0 relative z-20 shadow-2xl rounded-lg overflow-hidden border border-white/20 group">
                       <img src={posterImg} alt={movie.name} className="w-full h-full object-cover transform group-hover:scale-105 transition duration-500" />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer md:hidden" onClick={handleWatchNow}>
-                          {/* Icon Play nhỏ nếu đang xem dở để gợi ý */}
-                          {continueEp ? <FaHistory className="text-4xl text-white drop-shadow-lg" /> : <FaPlay className="text-4xl text-white drop-shadow-lg" />}
-                      </div>
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer md:hidden" onClick={handleWatchNow}><FaPlay className="text-4xl text-white drop-shadow-lg" /></div>
                   </div>
                   <div className="flex-1 space-y-5 md:space-y-7 z-20 text-center md:text-left w-full">
                       <div className="flex flex-wrap justify-center md:justify-start items-center gap-2 md:gap-3 text-xs md:text-sm font-medium text-gray-400">
@@ -211,20 +215,12 @@ const MovieDetail = () => {
                           <button onClick={() => setIsExpanded(!isExpanded)} className="text-phim-accent font-bold mt-2 hover:underline text-xs flex items-center gap-1 justify-center md:justify-start w-full md:w-auto">{isExpanded ? 'Thu gọn' : 'Xem thêm'} <FaChevronDown/></button>
                       </div>
                       
-                      {/* --- NÚT HÀNH ĐỘNG (UPDATE) --- */}
+                      {/* ACTION BUTTONS */}
                       <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-3">
-                          <button 
-                            onClick={handleWatchNow} 
-                            className="bg-phim-accent text-white px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-red-700 transition shadow-lg shadow-red-900/30 transform active:scale-95"
-                          >
-                              {continueEp ? (
-                                  <><FaHistory /> XEM TIẾP TẬP {continueEp.name}</>
-                              ) : (
-                                  <><FaPlay /> XEM NGAY</>
-                              )}
+                          <button onClick={handleWatchNow} className="bg-phim-accent text-white px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-red-700 transition shadow-lg transform active:scale-95">
+                              {continueEp ? <><FaHistory /> XEM TIẾP {continueEp.name}</> : <><FaPlay /> XEM NGAY</>}
                           </button>
-                          
-                          {tmdbData?.trailer && <button onClick={handleWatchTrailer} className="bg-white/10 text-white px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-red-600 hover:border-red-600 transition border border-white/10"><FaYoutube /> Trailer</button>}
+                          {(tmdbData?.trailer || movie.trailer_url) && <button onClick={handleWatchTrailer} className="bg-white/10 text-white px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-red-600 hover:border-red-600 transition border border-white/10"><FaYoutube /> Trailer</button>}
                           <button onClick={handleToggleFavorite} className={`p-3.5 rounded-full transition border ${isFavorite ? 'bg-red-600 border-red-600 text-white shadow-lg shadow-red-900/40' : 'bg-white/10 text-white border-white/10 hover:bg-white/20'}`}><FaHeart /></button>
                           <button onClick={handleShare} className="bg-white/10 text-white p-3.5 rounded-full hover:bg-white/20 transition border border-white/10"><FaShareAlt /></button>
                       </div>
@@ -234,19 +230,22 @@ const MovieDetail = () => {
       </div>
 
       <div className="container mx-auto max-w-7xl px-4 md:px-12 -mt-6 relative z-30 space-y-12">
-          {/* ... (Phần Cast, Gallery, Episodes, Comments giữ nguyên) ... */}
-          {/* Code phần dưới y hệt file cũ, mình không paste lại để tránh dài dòng, bạn giữ nguyên nhé */}
+          
+          {/* CAST SECTION (SỬ DỤNG DATA OPHIM PEOPLES) */}
           {casts && casts.length > 0 && (
-             <section className="relative group/cast">
-                  <h3 className="text-lg md:text-xl font-bold mb-4 text-white border-l-4 border-phim-accent pl-3">Diễn viên & Đạo diễn</h3>
-                  <button onClick={() => scrollCast(castRef, 'left')} className="absolute left-0 top-1/2 z-10 bg-black/70 p-2 rounded-full text-white opacity-0 group-hover/cast:opacity-100 hover:bg-phim-accent transition hidden md:block -ml-4 shadow-lg"><FaChevronLeft /></button>
-                  <button onClick={() => scrollCast(castRef, 'right')} className="absolute right-0 top-1/2 z-10 bg-black/70 p-2 rounded-full text-white opacity-0 group-hover/cast:opacity-100 hover:bg-phim-accent transition hidden md:block -mr-4 shadow-lg"><FaChevronRight /></button>
-                  <div ref={castRef} className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide snap-x scroll-smooth">
-                     {movie.director?.map((dir, idx) => (<div key={`dir-${idx}`} className="flex flex-col items-center min-w-[80px] snap-start"><div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-sm font-bold shadow-md mb-2 border border-gray-600 bg-gray-800 text-gray-400">DIR</div><p className="text-xs font-bold text-center text-white line-clamp-1 w-full">{dir}</p><p className="text-[10px] text-gray-500 uppercase">Đạo diễn</p></div>))}
-                     {casts.map((person, idx) => (<div key={idx} className="flex flex-col items-center min-w-[90px] snap-start group/actor"><div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden shadow-md mb-2 border-2 border-transparent group-hover/actor:border-phim-accent transition bg-gray-800">{person.profile_path ? <img src={getActorImg(person.profile_path)} alt={person.name} className="w-full h-full object-cover" loading="lazy"/> : <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 font-bold">{getInitials(person.name)}</div>}</div><p className="text-xs font-bold text-center text-white line-clamp-1 w-full group-hover/actor:text-phim-accent transition">{person.name}</p><p className="text-[10px] text-gray-500 text-center truncate w-full">{person.character || 'Diễn viên'}</p></div>))}
-                  </div>
-             </section>
+            <section className="relative group/cast">
+                <h3 className="text-lg md:text-xl font-bold mb-4 text-white border-l-4 border-phim-accent pl-3">Diễn viên & Đạo diễn</h3>
+                <button onClick={() => scrollCast(castRef, 'left')} className="absolute left-0 top-1/2 z-10 bg-black/70 p-2 rounded-full text-white opacity-0 group-hover/cast:opacity-100 hover:bg-phim-accent transition hidden md:block -ml-4 shadow-lg"><FaChevronLeft /></button>
+                <button onClick={() => scrollCast(castRef, 'right')} className="absolute right-0 top-1/2 z-10 bg-black/70 p-2 rounded-full text-white opacity-0 group-hover/cast:opacity-100 hover:bg-phim-accent transition hidden md:block -mr-4 shadow-lg"><FaChevronRight /></button>
+                
+                <div ref={castRef} className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide snap-x scroll-smooth">
+                    {movie.director?.map((dir, idx) => (<div key={`dir-${idx}`} className="flex flex-col items-center min-w-[80px] snap-start"><div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-sm font-bold shadow-md mb-2 border border-gray-600 bg-gray-800 text-gray-400">DIR</div><p className="text-xs font-bold text-center text-white line-clamp-1 w-full">{dir}</p><p className="text-[10px] text-gray-500 uppercase">Đạo diễn</p></div>))}
+                    {casts.map((person, idx) => (<div key={idx} className="flex flex-col items-center min-w-[90px] snap-start group/actor"><div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden shadow-md mb-2 border-2 border-transparent group-hover/actor:border-phim-accent transition bg-gray-800">{person.profile_path ? <img src={getActorImg(person.profile_path)} alt={person.name} className="w-full h-full object-cover" loading="lazy"/> : <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 font-bold">{getInitials(person.name)}</div>}</div><p className="text-xs font-bold text-center text-white line-clamp-1 w-full group-hover/actor:text-phim-accent transition">{person.name}</p><p className="text-[10px] text-gray-500 text-center truncate w-full">{person.character || 'Diễn viên'}</p></div>))}
+                </div>
+            </section>
           )}
+
+          {/* GALLERY SECTION */}
           {gallery && gallery.length > 0 && (
               <section className="relative group/gallery">
                   <h3 className="text-lg md:text-xl font-bold mb-4 text-white border-l-4 border-phim-accent pl-3">Hình ảnh phim</h3>
@@ -257,6 +256,8 @@ const MovieDetail = () => {
                   </div>
               </section>
           )}
+
+          {/* EPISODES */}
           <section id="episodes-section" className="bg-gray-900/50 p-4 md:p-8 rounded-xl border border-white/5">
                <h3 className="text-lg md:text-xl font-bold mb-5 flex items-center gap-2"><FaPlay className="text-phim-accent text-sm" /> Danh sách tập</h3>
                {episodes.length > 0 ? (
@@ -272,9 +273,13 @@ const MovieDetail = () => {
                   ))
                ) : (<div className="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded"><p className="text-sm">Chưa có tập phim nào.</p></div>)}
           </section>
+
+          {/* --- COMMENT CHUNG CHO PHIM --- */}
           <section id="comments-section" className="pt-8 border-t border-white/10">
               <CommentSection movieSlug={slug} />
           </section>
+
+          {/* RELATES */}
           {relatedMovies.length > 0 && (
              <div className="mt-12 border-t border-white/10 pt-8 pb-10">
                  <MovieRow title="Có thể bạn muốn xem" movies={relatedMovies} slug={movie.category?.[0]?.slug} type="the-loai" />
