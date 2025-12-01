@@ -5,9 +5,8 @@ import Header from '../components/layout/Header';
 import MovieRow from '../components/movies/MovieRow';
 import { getMovieDetail, getMoviesBySlug, getMoviePeoples, IMG_URL } from '../services/movieService';
 import { setWatchHistory, checkFavoriteStatus, toggleFavorite } from '../services/authService';
-// Import Comment Component
 import CommentSection from '../components/comments/CommentSection';
-import { FaPlay, FaList, FaLightbulb, FaStar, FaServer, FaStepForward, FaArrowLeft, FaExpand, FaCompress, FaClock, FaGlobe, FaUsers, FaHeart } from 'react-icons/fa';
+import { FaPlay, FaList, FaLightbulb, FaStar, FaServer, FaStepForward, FaArrowLeft, FaExpand, FaClock, FaGlobe, FaUsers, FaHeart } from 'react-icons/fa';
 
 const Toast = ({ message, onClose }) => {
     useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
@@ -38,6 +37,8 @@ const WatchMovie = () => {
   
   const [isFavorite, setIsFavorite] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  
+  // State lưu danh sách tập đã xem
   const [watchedEpisodes, setWatchedEpisodes] = useState([]);
 
   const currentEpSlug = searchParams.get('tap');
@@ -45,6 +46,7 @@ const WatchMovie = () => {
 
   const showToast = (msg) => setToastMsg(msg);
 
+  // 1. FETCH DATA PHIM
   useEffect(() => {
     if (!currentEpSlug) window.scrollTo(0, 0);
 
@@ -74,9 +76,12 @@ const WatchMovie = () => {
                   setRelatedMovies(relatedData.data.items.filter(m => m.slug !== data.movie.slug));
               }
           }
-          
-          const watched = JSON.parse(localStorage.getItem(`watched_${data.movie._id}`)) || [];
-          setWatchedEpisodes(watched);
+
+          // --- QUAN TRỌNG: LOAD TRẠNG THÁI ĐÃ XEM TỪ LOCALSTORAGE NGAY KHI LOAD PHIM ---
+          const storageKey = `watched_${data.movie._id}`;
+          const savedWatched = JSON.parse(localStorage.getItem(storageKey)) || [];
+          setWatchedEpisodes(savedWatched);
+          // -----------------------------------------------------------------------------
         }
       } catch (error) { console.error(error); } 
       finally { setLoading(false); }
@@ -84,27 +89,40 @@ const WatchMovie = () => {
     fetchData();
   }, [slug]);
 
+  // 2. SYNC EPISODE TỪ URL
   useEffect(() => {
       if (episodes.length > 0 && currentEpSlug) {
           const serverData = episodes[currentServer]?.server_data || [];
           const found = serverData.find(e => e.slug === currentEpSlug);
           if (found) {
               setCurrentEpisode(found);
-              if (movie) {
-                  setWatchHistory({
-                      movieSlug: movie.slug,
-                      episodeSlug: found.slug,
-                      movieName: movie.name,
-                      movieThumb: movie.thumb_url,
-                      episodeName: found.name
-                  });
-                  const newWatched = [...new Set([...watchedEpisodes, found.slug])];
-                  setWatchedEpisodes(newWatched);
-                  localStorage.setItem(`watched_${movie._id}`, JSON.stringify(newWatched));
-              }
           }
       }
-  }, [currentEpSlug, episodes, currentServer, movie]);
+  }, [currentEpSlug, episodes, currentServer]);
+
+  // 3. --- QUAN TRỌNG: LƯU TRẠNG THÁI "ĐÃ XEM" KHI CÓ TẬP MỚI ---
+  useEffect(() => {
+      if (movie && currentEpisode) {
+          // 1. Ghi vào Backend (Lịch sử xem)
+          setWatchHistory({
+              movieSlug: movie.slug,
+              episodeSlug: currentEpisode.slug,
+              movieName: movie.name,
+              movieThumb: movie.thumb_url,
+              episodeName: currentEpisode.name
+          });
+
+          // 2. Ghi vào LocalStorage (Để giữ màu xám khi F5)
+          const storageKey = `watched_${movie._id}`;
+          const currentList = JSON.parse(localStorage.getItem(storageKey)) || [];
+          
+          if (!currentList.includes(currentEpisode.slug)) {
+              const newList = [...currentList, currentEpisode.slug];
+              localStorage.setItem(storageKey, JSON.stringify(newList));
+              setWatchedEpisodes(newList);
+          }
+      }
+  }, [currentEpisode, movie]); // Chạy mỗi khi currentEpisode thay đổi
 
   const handleChangeEpisode = (ep) => {
     setCurrentEpisode(ep);
@@ -168,6 +186,8 @@ const WatchMovie = () => {
 
       <div className={`relative z-50 transition-all duration-700 ${isLightOff ? 'pt-10' : 'pt-24 pb-12'} container mx-auto px-0 md:px-4`} ref={playerRef}>
         <div className={`flex flex-col lg:flex-row gap-6 ${isTheater ? 'justify-center' : ''}`}>
+            
+            {/* CỘT TRÁI: PLAYER */}
             <div className={`w-full ${isTheater || isLightOff ? 'lg:w-[100%]' : 'lg:w-[75%]'} transition-all duration-500`}>
                 <div className="relative w-full aspect-video bg-black md:rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 group">
                     {currentEpisode ? <iframe src={currentEpisode.link_embed} className="w-full h-full object-fill" allowFullScreen title="Movie Player" frameBorder="0" /> : <div className="flex items-center justify-center h-full text-gray-500 bg-gray-900"><p>Đang tải...</p></div>}
@@ -178,6 +198,7 @@ const WatchMovie = () => {
                         {nextEp && <button onClick={() => handleChangeEpisode(nextEp)} className="flex items-center gap-1 text-xs font-bold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded transition animate-pulse">Tiếp theo <FaStepForward /></button>}
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* Nút Tim */}
                         <button onClick={handleToggleFavorite} className={`p-2 rounded transition ${isFavorite ? 'text-red-500 hover:bg-red-500/10' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`} title={isFavorite ? "Bỏ theo dõi" : "Theo dõi phim"}><FaHeart /></button>
                         <button onClick={() => setIsLightOff(!isLightOff)} className="p-2 rounded hover:bg-white/10 text-gray-300" title="Tắt đèn"><FaLightbulb /></button>
                         <button onClick={() => setIsTheater(!isTheater)} className="p-2 rounded hover:bg-white/10 text-gray-300 hidden md:block" title="Rạp chiếu"><FaExpand /></button>
@@ -198,27 +219,31 @@ const WatchMovie = () => {
                             <h2 className="text-sm text-gray-500 italic mb-4 border-b border-white/5 pb-4">{movie.origin_name}</h2>
                             <p className="text-gray-300 text-sm leading-relaxed line-clamp-4">{movie.content?.replace(/<[^>]*>?/gm, '')}</p>
                         </div>
-
-                        {/* --- BÌNH LUẬN THEO TẬP --- */}
-                        {movie && currentEpisode && (
-                            <CommentSection 
-                                movieSlug={movie.slug} 
-                                episodeSlug={currentEpisode.slug} 
-                            />
-                        )}
+                        {movie && currentEpisode && <CommentSection movieSlug={movie.slug} episodeSlug={currentEpisode.slug} />}
                     </div>
                 )}
             </div>
 
+            {/* --- CỘT PHẢI: SIDEBAR --- */}
             {!isTheater && !isLightOff && (
                 <div className={`w-full lg:w-[28%] flex flex-col gap-6 transition-all duration-700 ${isLightOff ? 'opacity-20 blur-sm' : 'opacity-100'} px-4 md:px-0`}>
+                    
+                    {/* 1. DANH SÁCH TẬP */}
                     <div className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden flex flex-col max-h-[400px] shadow-lg">
                         <div className="p-4 bg-white/5 border-b border-white/5 flex justify-between items-center">
                             <h3 className="font-bold text-white flex items-center gap-2 text-sm"><FaList className="text-red-600"/> Chọn Tập</h3>
                             {episodes.length > 1 && (
-                                <select className="bg-black border border-white/20 text-xs rounded px-2 py-1 outline-none text-gray-300" onChange={(e) => setCurrentServer(Number(e.target.value))}>
-                                    {episodes.map((s, i) => <option key={i} value={i}>{s.server_name}</option>)}
-                                </select>
+                                <div className="flex gap-1">
+                                    {episodes.map((s, i) => (
+                                        <button 
+                                            key={i} 
+                                            onClick={() => setCurrentServer(i)} 
+                                            className={`px-2 py-1 text-[10px] font-bold rounded border ${currentServer === i ? 'bg-red-600 border-red-600 text-white' : 'bg-black/40 text-gray-400 border-white/10 hover:text-white'}`}
+                                        >
+                                            {s.server_name}
+                                        </button>
+                                    ))}
+                                </div>
                             )}
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
@@ -226,13 +251,30 @@ const WatchMovie = () => {
                                 {episodes[currentServer]?.server_data?.map((ep) => {
                                     const isActive = currentEpisode?.slug === ep.slug;
                                     const isWatched = watchedEpisodes.includes(ep.slug);
+                                    
                                     return (
-                                        <button key={ep.slug} onClick={() => handleChangeEpisode(ep)} className={`relative h-9 rounded text-xs font-bold transition-all border ${isActive ? 'bg-red-600 text-white border-red-600 shadow-lg' : isWatched ? 'bg-gray-700 text-gray-400 border-gray-600' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'}`}>{ep.name}</button>
+                                        <button
+                                            key={ep.slug}
+                                            onClick={() => handleChangeEpisode(ep)}
+                                            className={`
+                                                relative h-9 rounded text-xs font-bold transition-all border
+                                                ${isActive 
+                                                    ? 'bg-red-600 text-white border-red-600 shadow-lg z-10' // Đang xem (Đỏ)
+                                                    : isWatched 
+                                                        ? 'bg-gray-700 text-gray-400 border-gray-600' // Đã xem (Xám)
+                                                        : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10 hover:text-white' // Chưa xem
+                                                }
+                                            `}
+                                        >
+                                            {ep.name}
+                                        </button>
                                     );
                                 })}
                             </div>
                         </div>
                     </div>
+
+                    {/* 2. DIỄN VIÊN */}
                     {casts.length > 0 && (
                         <div className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden shadow-lg">
                             <div className="p-4 bg-white/5 border-b border-white/5"><h3 className="font-bold text-white flex items-center gap-2 text-sm"><FaUsers className="text-red-600"/> Diễn viên</h3></div>
@@ -240,8 +282,13 @@ const WatchMovie = () => {
                                 <div className="grid grid-cols-2 gap-3">
                                     {casts.map((actor, idx) => (
                                         <div key={idx} className="flex items-center gap-2 group cursor-pointer p-1.5 rounded hover:bg-white/5 transition border border-transparent hover:border-white/5">
-                                            <div className="w-9 h-9 rounded-full overflow-hidden border border-white/20 flex-shrink-0 bg-gray-800">{actor.profile_path ? <img src={getActorImg(actor.profile_path)} alt={actor.name} className="w-full h-full object-cover" loading="lazy"/> : <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 font-bold">{actor.name.charAt(0)}</div>}</div>
-                                            <div className="min-w-0"><p className="text-xs font-bold text-gray-200 truncate group-hover:text-red-500 transition">{actor.name}</p><p className="text-[9px] text-gray-500 truncate">{actor.character || 'Diễn viên'}</p></div>
+                                            <div className="w-9 h-9 rounded-full overflow-hidden border border-white/20 flex-shrink-0 bg-gray-800">
+                                                {actor.profile_path ? <img src={getActorImg(actor.profile_path)} alt={actor.name} className="w-full h-full object-cover" loading="lazy"/> : <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 font-bold">{actor.name.charAt(0)}</div>}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold text-gray-200 truncate group-hover:text-red-500 transition">{actor.name}</p>
+                                                <p className="text-[9px] text-gray-500 truncate">{actor.character || 'Diễn viên'}</p>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
