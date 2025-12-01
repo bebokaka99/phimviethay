@@ -110,9 +110,15 @@ const CommentSection = ({ movieSlug, episodeSlug }) => {
                       <span className={`font-bold text-white ${isReply ? 'text-xs' : 'text-sm'} cursor-pointer hover:underline`}>
                           {cmt.fullname || cmt.username}
                       </span>
+                      
+                      {/* --- SỬA ĐOẠN NÀY: HIỂN THỊ ADMIN --- */}
                       {cmt.role === 'admin' && (
-                          <span className="bg-gray-700 text-gray-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold">Author</span>
+                          <span className="bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider border border-red-500/50 shadow-sm">
+                              ADMIN
+                          </span>
                       )}
+                      {/* ------------------------------------- */}
+
                       <span className="text-[11px] text-gray-400">{timeAgo(cmt.created_at)}</span>
                   </div>
 
@@ -202,7 +208,7 @@ const CommentSection = ({ movieSlug, episodeSlug }) => {
             {rootComments.length > 0 ? rootComments.map(cmt => (
                 <CommentItem key={cmt.id} cmt={cmt} />
             )) : (
-                // --- SỬA TẠI ĐÂY: CĂN GIỮA VÀ LÀM ĐẸP PLACEHOLDER ---
+                // Căn giữa thông báo trống
                 <div className="flex flex-col items-center justify-center py-12 text-gray-500 border border-dashed border-white/10 rounded-xl bg-white/5">
                     <FaComments className="text-4xl mb-3 opacity-30" />
                     <p className="text-sm font-medium">Chưa có bình luận nào.</p>

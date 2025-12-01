@@ -1,9 +1,13 @@
 import axios from 'axios';
 
+// 1. CẤU HÌNH CLIENT CHO OPHIM
 const client = axios.create({
     baseURL: 'https://ophim1.com/v1/api',
     headers: { 'Content-Type': 'application/json' }
 });
+
+// URL Backend của bạn (Lấy từ biến môi trường hoặc mặc định localhost)
+const MY_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 let DYNAMIC_CDN = 'https://img.ophim.live/uploads/movies/'; 
 export const IMG_URL = ''; 
@@ -75,6 +79,7 @@ export const getMovieDetail = async (slug) => {
 
             movieObj.poster_url = poster;
             movieObj.thumb_url = thumb;
+            if (!movieObj.tmdb) movieObj.tmdb = { vote_average: 0, vote_count: 0 };
 
             return { status: true, movie: movieObj, episodes: movieObj.episodes || [] };
         }
@@ -85,12 +90,8 @@ export const getMovieDetail = async (slug) => {
 // 5. SEARCH
 export const searchMovies = async (keyword, page = 1) => {
     try {
-        const response = await client.get('/tim-kiem', { 
-            params: { 
-                keyword: keyword,
-                page: page // Truyền số trang lên server
-            } 
-        });
+        // Không truyền limit nữa, chỉ truyền page
+        const response = await client.get('/tim-kiem', { params: { keyword, page } });
         const resData = response.data;
 
         if (resData?.data?.APP_DOMAIN_CDN_IMAGE) {
@@ -104,34 +105,56 @@ export const searchMovies = async (keyword, page = 1) => {
                 thumb_url: resolveImg(m.thumb_url)
             }));
         }
-        return resData; // Trả về full data để lấy pagination info
+        return resData;
     } catch (error) { return null; }
 };
 
-// --- [QUAN TRỌNG] API PHỤ TRỢ CỦA OPHIM ---
-
-// 6. Lấy Diễn viên (Có ảnh)
+// 6. PEOPLES
 export const getMoviePeoples = async (slug) => {
     try {
         const cleanSlug = slug.replace(/^player-/, '');
         const response = await client.get(`/phim/${cleanSlug}/peoples`);
-        
-        // Cấu trúc JSON: { data: { peoples: [...] } }
-        if (response.data?.data?.peoples) {
-             return response.data.data.peoples; 
-        }
+        if (response.data?.data?.peoples) return response.data.data.peoples; 
         return [];
-    } catch (error) {
-        return [];
-    }
+    } catch (error) { return []; }
 };
 
-// 7. API LẤY HÌNH ẢNH
+// 7. IMAGES
 export const getMovieImages = async (slug) => {
     try {
         const cleanSlug = slug.replace(/^player-/, '');
         const response = await client.get(`/phim/${cleanSlug}/images`);
-        // Thường cấu trúc images cũng tương tự
         return response.data?.data || []; 
     } catch (error) { return []; }
+};
+
+// --- API CỦA RIÊNG BẠN (BACKEND) ---
+// 8. Tăng view (Giữ nguyên, chỉ cần đảm bảo truyền đủ data)
+export const increaseView = async (movieData) => {
+    try {
+        if (!movieData || !movieData.slug) return;
+        await axios.post(`${MY_API_URL}/movies/view`, movieData);
+    } catch (e) { console.error("Lỗi tăng view:", e); }
+};
+
+// 9. Lấy Trending (CẬP NHẬT MAPPING)
+export const getTrendingMovies = async () => {
+    try {
+        const res = await axios.get(`${MY_API_URL}/movies/trending`);
+        // Map từ DB (snake_case) sang App (camelCase)
+        return res.data.map(m => ({
+            _id: m.movie_slug,
+            slug: m.movie_slug,
+            name: m.movie_name,
+            thumb_url: m.movie_thumb,
+            
+            // Map đúng các cột này
+            quality: m.movie_quality || 'HD',
+            year: m.movie_year || '2024',
+            episode_current: m.episode_current || 'Full',
+            vote_average: m.vote_average ? parseFloat(m.vote_average) : 0,
+
+            origin_name: `${m.view_count} lượt xem` // Hiển thị view thay tên gốc
+        }));
+    } catch (e) { return []; }
 };

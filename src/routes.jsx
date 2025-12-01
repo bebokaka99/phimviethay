@@ -14,6 +14,11 @@ import Profile from "./pages/Profile";
 import Favorites from "./pages/Favorites";
 // ---------------------------------
 import History from "./pages/History";
+// ADMIN PAGES
+import AdminLayout from "./components/admin/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
+import Users from "./pages/admin/Users";
+import Comments from "./pages/admin/Comments";
 
 export const router = createBrowserRouter([
   {
@@ -43,7 +48,16 @@ export const router = createBrowserRouter([
     ],
     errorElement: <NotFound />,
   },
-
+  {
+    path: "/admin",
+    element: <AdminLayout />,
+    children: [
+      { index: true, element: <Dashboard /> },
+      // --- ROUTE MỚI ---
+      { path: "users", element: <Users /> },       // /admin/users
+      { path: "comments", element: <Comments /> }, // /admin/comments
+    ]
+  },
 
   // Login/Register thường đứng riêng, không cần Header/Footer (hoặc tùy bạn)
   { path: "/login", element: <Login /> },

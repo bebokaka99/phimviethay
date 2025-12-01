@@ -1,36 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet-async'; // Import SEO
+import { Helmet } from 'react-helmet-async';
 import Header from '../components/layout/Header';
 import HeroSection from '../components/movies/HeroSection';
 import MovieRow from '../components/movies/MovieRow';
 import { HomeSkeleton } from '../components/common/Skeleton';
-import { getHomeData, getMoviesBySlug } from '../services/movieService';
+// Import thêm getTrendingMovies
+import { getHomeData, getMoviesBySlug, getTrendingMovies } from '../services/movieService';
 
 const Home = () => {
   const [loadingBanner, setLoadingBanner] = useState(true);
   const [loadingList, setLoadingList] = useState(true);
   
   const [bannerMovies, setBannerMovies] = useState([]);
+  const [trendingMovies, setTrendingMovies] = useState([]); // State lưu phim Hot
   
-  // State lưu trữ các danh sách phim
   const [categories, setCategories] = useState({
-      phimLe: [], 
-      phimBo: [], 
-      tvShows: [],
-      hoatHinh: [],
-      hanhDong: [],
-      tinhCam: [],
-      hanQuoc: [],
-      trungQuoc: []
+      phimLe: [], phimBo: [], tvShows: [], hoatHinh: [], hanhDong: [], tinhCam: [], hanQuoc: [], trungQuoc: []
   });
 
-  // 1. Tải Banner (Ưu tiên số 1)
+  // 1. Tải Banner
   useEffect(() => {
     const fetchBanner = async () => {
         try {
             const data = await getHomeData();
             if (data?.data?.items) {
-                // Lấy 8 phim đầu làm slider cho đa dạng
                 setBannerMovies(data.data.items.slice(0, 8));
             }
         } catch (err) { console.error(err); } 
@@ -39,11 +32,13 @@ const Home = () => {
     fetchBanner();
   }, []);
 
-  // 2. Tải các danh sách bên dưới (Chạy song song)
+  // 2. Tải List Phim & Trending
   useEffect(() => {
       const fetchLists = async () => {
           try {
-              // Gọi song song nhiều API để tiết kiệm thời gian
+              // Gọi API Trending song song với các list khác
+              getTrendingMovies().then(res => setTrendingMovies(res));
+
               const [phimLe, phimBo, tvShows, hoatHinh, hanhDong, tinhCam, hanQuoc, trungQuoc] = await Promise.all([
                   getMoviesBySlug('phim-le', 1, 'danh-sach'),
                   getMoviesBySlug('phim-bo', 1, 'danh-sach'),
@@ -71,21 +66,26 @@ const Home = () => {
       fetchLists();
   }, []);
 
+  // --- TẠO TITLE ĐẶC BIỆT CHO TRENDING ---
+  const TrendingTitle = (
+      <div className="flex items-center gap-3">
+          <span className="text-white">Top 10 Phim Xem Nhiều</span>
+          <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded animate-pulse shadow-lg shadow-red-600/50 tracking-wider border border-red-500">
+              HOT
+          </span>
+      </div>
+  );
+
   if (loadingBanner) return <HomeSkeleton />;
 
   return (
     <div className="min-h-screen bg-phim-dark pb-20 overflow-x-hidden">
-      
-      {/* --- SEO META TAGS --- */}
       <Helmet>
         <title>PhimVietHay - Xem Phim Online HD Vietsub Thuyết Minh Mới Nhất</title>
-        <meta name="description" content="PhimVietHay - Trang web xem phim trực tuyến miễn phí chất lượng cao, cập nhật liên tục phim bộ, phim lẻ, anime, tv shows mới nhất 2024." />
-        <meta property="og:title" content="PhimVietHay - Xem Phim Online HD Vietsub" />
-        <meta property="og:description" content="Xem phim online miễn phí chất lượng cao, tốc độ nhanh tại PhimVietHay." />
-        <meta property="og:image" content="https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1925&auto=format&fit=crop" />
-        <meta property="og:type" content="website" />
+        <meta name="description" content="PhimVietHay - Trang web xem phim trực tuyến miễn phí chất lượng cao, cập nhật liên tục phim bộ, phim lẻ, anime, tv shows mới nhất." />
       </Helmet>
 
+      <Header />
       
       <HeroSection movies={bannerMovies} />
       
@@ -103,21 +103,24 @@ const Home = () => {
              </div>
         ) : (
             <>
-                {/* --- LIST PHIM --- */}
-                
-                {/* Nhóm Phim Mới */}
+                {/* --- TOP TRENDING (HIỂN THỊ ĐẦU TIÊN) --- */}
+                {trendingMovies.length > 0 && (
+                    <div className="mb-8">
+                        {/* Truyền biến TrendingTitle chứa JSX vào prop title */}
+                        <MovieRow title={TrendingTitle} movies={trendingMovies} />
+                    </div>
+                )}
+
+                {/* Các mục phim khác */}
                 <MovieRow title="Phim Lẻ Mới Cập Nhật" movies={categories.phimLe} slug="phim-le" type="danh-sach" />
                 <MovieRow title="Phim Bộ Hot" movies={categories.phimBo} slug="phim-bo" type="danh-sach" />
                 
-                {/* Nhóm Thể loại */}
-                <MovieRow title="Phim Hành Động" movies={categories.hanhDong} slug="hanh-dong" type="the-loai" />
-                <MovieRow title="Phim Tình Cảm" movies={categories.tinhCam} slug="tinh-cam" type="the-loai" />
+                <MovieRow title="Phim Hành Động Gay Cấn" movies={categories.hanhDong} slug="hanh-dong" type="the-loai" />
+                <MovieRow title="Phim Tình Cảm Lãng Mạn" movies={categories.tinhCam} slug="tinh-cam" type="the-loai" />
 
-                {/* Nhóm Quốc gia */}
                 <MovieRow title="Phim Hàn Quốc" movies={categories.hanQuoc} slug="han-quoc" type="quoc-gia" />
                 <MovieRow title="Phim Trung Quốc" movies={categories.trungQuoc} slug="trung-quoc" type="quoc-gia" />
 
-                {/* Nhóm Khác */}
                 <MovieRow title="Hoạt Hình / Anime" movies={categories.hoatHinh} slug="hoat-hinh" type="danh-sach" />
                 <MovieRow title="TV Shows & Gameshow" movies={categories.tvShows} slug="tv-shows" type="danh-sach" />
             </>
