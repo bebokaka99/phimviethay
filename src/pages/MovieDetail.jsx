@@ -143,7 +143,6 @@ const MovieDetail = () => {
         <meta property="og:image" content={posterImg} />
       </Helmet>
 
-      <Header />
       {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg('')} />}
       
       {/* HERO */}
