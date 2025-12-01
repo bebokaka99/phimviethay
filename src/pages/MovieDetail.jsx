@@ -180,7 +180,6 @@ const MovieDetail = () => {
         <meta property="og:type" content="video.movie" />
       </Helmet>
 
-      <Header />
       {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg('')} />}
       
       {/* HERO */}
