@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+// Bỏ import getTmdbDetails
 import { IMG_URL, getMovieDetail } from '../../services/movieService'; 
 import { FaPlay, FaInfoCircle, FaStar } from 'react-icons/fa';
 
@@ -11,18 +12,30 @@ const HeroSection = ({ movies }) => {
   useEffect(() => {
     const fetchHighQualityImages = async () => {
         if (!movies || movies.length === 0) return;
+
         const top5 = movies.slice(0, 5);
+        
         const updatedMovies = await Promise.all(top5.map(async (movie) => {
             try {
+                // Gọi API chi tiết OPhim để lấy ảnh poster_url chuẩn
                 const data = await getMovieDetail(movie.slug);
                 if (data?.status && data?.movie) {
-                    return { ...movie, poster_url: data.movie.poster_url, tmdb: data.movie.tmdb };
+                    return {
+                        ...movie,
+                        poster_url: data.movie.poster_url, 
+                        tmdb: data.movie.tmdb,
+                        content: data.movie.content // Lấy nội dung đầy đủ
+                    };
                 }
                 return movie;
-            } catch (e) { return movie; }
+            } catch (e) {
+                return movie;
+            }
         }));
+
         setHeroMovies(updatedMovies);
     };
+
     fetchHighQualityImages();
   }, [movies]);
 
@@ -59,25 +72,22 @@ const HeroSection = ({ movies }) => {
   return (
     <div className="relative h-[500px] md:h-[700px] w-full text-white overflow-hidden group">
       
-      {/* --- BACKGROUND (ĐÃ CHỈNH SÁNG HƠN) --- */}
+      {/* BACKGROUND */}
       <div 
         key={movie._id + '-bg'} 
         className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
         style={{ backgroundImage: `url(${backdropImg})` }}
       >
-         {/* Thay vì phủ đen toàn bộ, ta dùng Gradient Tối -> Sáng */}
-         {/* Bên trái tối (90%) để đọc chữ, bên phải trong suốt để hiện ảnh */}
          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0e17] via-[#0a0e17]/60 to-transparent backdrop-blur-[1px]" /> 
       </div>
       
-      {/* Gradient đáy để hòa vào phần list phim bên dưới */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-transparent to-transparent" />
 
       {/* MAIN CONTENT */}
       <div className="absolute inset-0 flex items-center justify-center pb-8 md:pb-0">
         <div className="w-full max-w-[1500px] mx-auto px-6 md:px-16 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 mt-10 md:mt-0">
             
-            {/* CỘT TRÁI: TEXT */}
+            {/* CỘT TRÁI */}
             <div key={movie._id + '-text'} className="w-full md:w-[60%] space-y-6 z-10 animate-fade-up-custom">
                 <h1 
                     onClick={handleNavigate}
@@ -125,7 +135,7 @@ const HeroSection = ({ movies }) => {
         </div>
       </div>
 
-      {/* --- THUMBNAIL NAVIGATION (ĐÃ KHÔI PHỤC THANH LOADING) --- */}
+      {/* THUMBNAIL NAVIGATION */}
       <div className="absolute bottom-8 right-12 z-20 hidden xl:flex items-center gap-3">
           {heroMovies.map((m, idx) => {
             let thumbWide = `${IMG_URL}${m.poster_url || m.thumb_url}`;
@@ -139,34 +149,19 @@ const HeroSection = ({ movies }) => {
                     onClick={() => setCurrentIndex(idx)}
                     className={`relative w-24 h-14 rounded-md overflow-hidden cursor-pointer transition-all duration-300 ease-out ${
                         idx === currentIndex 
-                        ? 'scale-110 -translate-y-1 shadow-lg border border-white/50 z-10 opacity-100' // Active
-                        : 'opacity-60 hover:opacity-100 hover:scale-105 grayscale hover:grayscale-0 border border-white/10' // Inactive
+                        ? 'scale-110 -translate-y-1 shadow-lg border border-white/50 z-10 opacity-100' 
+                        : 'opacity-60 hover:opacity-100 hover:scale-105 grayscale hover:grayscale-0 border border-white/10' 
                     }`}
                 >
                     <img src={thumbWide} alt="" className="w-full h-full object-cover" />
-                    
-                    {/* THANH LOADING ĐỎ (ĐÃ THÊM LẠI) */}
-                    {idx === currentIndex && (
-                        <div 
-                            className="absolute bottom-0 left-0 h-[3px] bg-red-600 z-20" 
-                            style={{
-                                width: '100%',
-                                animation: 'loadingBar 8s linear infinite' // Dùng animation CSS thuần
-                            }}
-                        ></div>
+                     {idx === currentIndex && (
+                        <div className="absolute bottom-0 left-0 h-[3px] bg-red-600 z-20" style={{width: '100%', animation: 'loadingBar 8s linear infinite'}}></div>
                     )}
                 </div>
             );
           })}
       </div>
-      
-      {/* Định nghĩa keyframe nội bộ cho thanh loading */}
-      <style>{`
-        @keyframes loadingBar {
-            from { width: 0%; }
-            to { width: 100%; }
-        }
-      `}</style>
+      <style>{`@keyframes loadingBar { from { width: 0%; } to { width: 100%; } }`}</style>
     </div>
   );
 };
