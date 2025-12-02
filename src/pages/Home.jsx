@@ -85,7 +85,6 @@ const Home = () => {
         <meta name="description" content="PhimVietHay - Trang web xem phim trực tuyến miễn phí chất lượng cao, cập nhật liên tục phim bộ, phim lẻ, anime, tv shows mới nhất." />
       </Helmet>
 
-      <Header />
       
       <HeroSection movies={bannerMovies} />
       
