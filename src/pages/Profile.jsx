@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Header from '../components/layout/Header';
-// Dùng MovieCard trực tiếp để kiểm soát props tốt hơn thay vì MovieGrid
 import MovieCard from '../components/movies/MovieCard'; 
+import UserAvatar from '../components/common/UserAvatar';
 import { getFavorites, getCurrentUser, updateProfile, logout, toggleFavorite } from '../services/authService';
-import { FaUserCircle, FaSave, FaSignOutAlt, FaCamera, FaLock, FaIdCard, FaHeart, FaPlayCircle, FaTimes, FaCloudUploadAlt, FaImage, FaUserEdit, FaFilm, FaCheckCircle, FaTrashAlt, FaStar, FaExclamationTriangle } from 'react-icons/fa';
+import { FaUserCircle, FaSave, FaSignOutAlt, FaCamera, FaLock, FaIdCard, FaHeart, FaTrashAlt, FaStar, FaExclamationTriangle, FaCloudUploadAlt, FaCheckCircle, FaImage, FaPen, FaTimes } from 'react-icons/fa';
 
 const PRESET_AVATARS = [
     { name: 'Luffy', url: 'https://api.dicebear.com/9.x/adventurer/svg?seed=Luffy' },
@@ -33,26 +34,19 @@ const Profile = () => {
   const [formData, setFormData] = useState({ fullname: '', avatar: '', newPassword: '', confirmPassword: '' });
   const fileInputRef = useRef(null);
 
-  // --- LOAD DATA & MAP DATABASE SANG CARD ---
   const fetchFavs = async () => {
       const data = await getFavorites();
-      
-      // MAP DỮ LIỆU CHUẨN
       const mappedData = data.map(item => ({
-          _id: item.id,
+          _id: item.id, 
           slug: item.movie_slug,
           name: item.movie_name,
           thumb_url: item.movie_thumb,
           quality: item.movie_quality || 'HD',
           year: item.movie_year || '2024',
-          
-          // QUAN TRỌNG: Map đúng 2 trường này
           episode_current: item.episode_current || 'Full',
           vote_average: item.vote_average ? parseFloat(item.vote_average) : 0,
-          
-          origin_name: 'Đã lưu'
+          origin_name: 'Đã lưu' 
       }));
-
       setFavorites(mappedData || []);
       setLoadingFavs(false);
   };
@@ -63,7 +57,6 @@ const Profile = () => {
       fetchFavs();
   }, [user, navigate]);
 
-  // Xử lý xóa
   const requestDelete = (e, movie) => {
       e.stopPropagation();
       setMovieToDelete(movie);
@@ -79,7 +72,6 @@ const Profile = () => {
       }
   };
 
-  // ... (Giữ nguyên các hàm handleFileUpload, handleUpdate) ...
   const handleFileUpload = (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -89,6 +81,7 @@ const Profile = () => {
           reader.readAsDataURL(file);
       }
   };
+
   const handleUpdate = async (e) => {
       e.preventDefault();
       if (formData.newPassword && formData.newPassword !== formData.confirmPassword) { alert('Mật khẩu nhập lại không khớp!'); return; }
@@ -103,129 +96,157 @@ const Profile = () => {
   if (!user) return null;
 
   return (
-    <div className="bg-[#0a0a0a] min-h-screen text-white font-sans pb-20 selection:bg-red-600 selection:text-white">
+    <div className="min-h-screen bg-transparent text-white font-sans pb-20 selection:bg-red-600 selection:text-white">
+      <Helmet><title>Hồ sơ của tôi | PhimVietHay</title></Helmet>
 
-      {/* BANNER (Giữ nguyên) */}
-      <div className="relative h-[300px] overflow-hidden group">
-          <div className="absolute inset-0 bg-cover bg-center blur-3xl opacity-30 scale-110 transition-all duration-1000" style={{ backgroundImage: `url(${user.avatar})` }} />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/40 via-[#0a0a0a]/80 to-[#0a0a0a]" />
-          <div className="absolute bottom-0 left-0 w-full container mx-auto px-4 md:px-12 pb-10 flex items-end gap-6 z-10 translate-y-10">
+      {/* --- BANNER PROFILE (HOÀN TOÀN TRONG SUỐT) --- */}
+      <div className="relative h-[350px] md:h-[400px] group overflow-hidden mt-[-64px] md:mt-[-80px]">
+          {/* ĐÃ XÓA LỚP NỀN MỜ BLUR Ở ĐÂY */}
+          
+          {/* Gradient nhẹ ở đáy để dễ đọc chữ */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-transparent to-transparent" />
+          
+          <div className="absolute bottom-0 left-0 w-full container mx-auto px-4 md:px-12 pb-4 flex flex-col md:flex-row items-center md:items-end gap-6 z-10">
+              
+              {/* Avatar */}
               <div className="relative group/avatar">
-                  <div className="w-28 h-28 md:w-36 md:h-36 rounded-full p-1 bg-gradient-to-br from-red-600 to-purple-600 shadow-2xl shadow-red-900/50">
-                      <div className="w-full h-full rounded-full overflow-hidden border-4 border-[#0a0a0a] bg-black"><img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" /></div>
+                  <div className="p-1 rounded-full bg-gradient-to-br from-red-600 to-purple-600 shadow-[0_0_30px_rgba(220,38,38,0.3)]">
+                      <UserAvatar 
+                          user={user} 
+                          className="w-28 h-28 md:w-36 md:h-36 border-4 border-[#0a0e17] bg-[#0a0e17]" 
+                          fontSize="text-4xl" 
+                      />
                   </div>
-                  <button onClick={() => { setActiveTab('avatar'); setShowEdit(true); }} className="absolute bottom-1 right-1 bg-[#222] text-white p-2.5 rounded-full shadow-lg border border-white/20 hover:bg-white hover:text-black transition transform hover:scale-110"><FaCamera className="text-sm" /></button>
+                  <button 
+                    onClick={() => { setActiveTab('avatar'); setShowEdit(true); }}
+                    className="absolute bottom-1 right-1 bg-[#222] text-white p-2.5 rounded-full shadow-lg border border-white/20 hover:bg-white hover:text-black transition transform hover:scale-110"
+                  >
+                      <FaCamera className="text-sm" />
+                  </button>
               </div>
-              <div className="flex-1 pb-2">
-                  <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight drop-shadow-lg mb-2">{user.fullname || user.username}</h1>
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                      <span className="text-gray-400 font-medium">@{user.username}</span>
-                      <span className="text-gray-600">•</span>
-                      <span className="text-yellow-500 font-bold flex items-center gap-1"><FaStar /> VIP Member</span>
+
+              {/* Info */}
+              <div className="flex-1 text-center md:text-left mb-2">
+                  <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-2xl mb-2">
+                      {user.fullname || user.username}
+                  </h1>
+                  
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-medium text-gray-300">
+                      <span className="drop-shadow-md">@{user.username}</span>
+                      <span className="w-1 h-1 bg-gray-500 rounded-full"></span>
+                      <span className="drop-shadow-md">{user.email}</span>
+                      
+                      {user.role === 'admin' && (
+                           <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold tracking-wider shadow-lg shadow-red-900/30">ADMIN</span>
+                      )}
                   </div>
               </div>
-              <div className="hidden md:flex gap-3 pb-4">
-                  <button onClick={() => { setActiveTab('info'); setShowEdit(true); }} className="bg-white/10 text-white font-bold py-2 px-5 rounded-lg hover:bg-white/20 transition border border-white/10 flex items-center gap-2 text-sm"><FaUserEdit /> Chỉnh sửa</button>
-                  <button onClick={() => { logout(); navigate('/login'); }} className="bg-red-600/10 text-red-500 border border-red-600/30 font-bold py-2 px-4 rounded-lg hover:bg-red-600 hover:text-white transition text-sm"><FaSignOutAlt /></button>
+
+              {/* Actions */}
+              <div className="flex gap-3 mb-2">
+                  <button 
+                    onClick={() => { setActiveTab('info'); setShowEdit(true); }} 
+                    className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white font-bold py-2.5 px-6 rounded-full shadow-lg transition flex items-center gap-2"
+                  >
+                      <FaPen className="text-xs" /> Chỉnh sửa
+                  </button>
+                  <button 
+                    onClick={() => { logout(); navigate('/login'); }} 
+                    className="bg-red-600/20 hover:bg-red-600 border border-red-600/50 text-red-500 hover:text-white font-bold py-2.5 px-4 rounded-full backdrop-blur-md transition flex items-center gap-2 transform active:scale-95 group/logout"
+                  >
+                      <FaSignOutAlt className="group-hover/logout:rotate-180 transition-transform duration-300" />
+                  </button>
               </div>
           </div>
       </div>
 
-      <div className="h-16 md:h-16"></div>
-
-      {/* Mobile Actions */}
-      <div className="md:hidden px-4 flex gap-3 mb-8">
-           <button onClick={() => { setActiveTab('info'); setShowEdit(true); }} className="flex-1 bg-[#222] text-white font-bold py-2.5 rounded-lg border border-white/10 flex justify-center items-center gap-2 text-sm"><FaUserEdit /> Chỉnh sửa</button>
-           <button onClick={() => { logout(); navigate('/login'); }} className="bg-red-900/20 text-red-500 border border-red-500/50 px-4 rounded-lg"><FaSignOutAlt /></button>
-      </div>
+      <div className="h-8"></div>
 
       <div className="container mx-auto px-4 md:px-12">
-          <div className="mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
-              <h2 className="text-xl md:text-2xl font-bold text-white">Tủ Phim Của Tôi</h2>
-              <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-md">{favorites.length}</span>
+          <div className="mb-8 flex items-end justify-between border-b border-white/10 pb-4">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <FaHeart className="text-red-600" /> Tủ Phim Của Tôi
+                  <span className="text-sm font-normal text-gray-500">({favorites.length})</span>
+              </h2>
           </div>
 
           {loadingFavs ? (
               <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-red-600"></div></div>
           ) : favorites.length > 0 ? (
-              
-              // --- GRID PHIM (Dùng MovieCard) ---
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 gap-y-8">
                   {favorites.map((movie) => (
-                      <div className="relative group">
-                          {/* Render Card */}
-                          <MovieCard key={movie._id} movie={movie} />
-                          
-                          {/* Nút Xóa Nhanh (Overlay lên Card) */}
+                      <div key={movie._id} className="relative group">
+                          <MovieCard movie={movie} />
                           <div 
                             onClick={(e) => requestDelete(e, movie)}
-                            className="absolute top-2 right-2 bg-black/80 text-red-500 p-1.5 rounded-md hover:bg-red-600 hover:text-white transition z-30 opacity-0 group-hover:opacity-100 cursor-pointer border border-red-500/30 shadow-lg"
+                            className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                             title="Xóa khỏi tủ"
                           >
-                              <FaTrashAlt size={12} />
+                              <div className="bg-black/80 text-white hover:text-red-500 p-2 rounded-md backdrop-blur-md border border-white/10 shadow-xl transform hover:scale-110 transition">
+                                  <FaTrashAlt size={12} />
+                              </div>
                           </div>
                       </div>
                   ))}
               </div>
           ) : (
-              <div className="py-20 text-center border-2 border-dashed border-gray-800 rounded-2xl bg-white/5">
-                  <FaHeart className="text-5xl mx-auto mb-3 text-gray-700"/>
-                  <p className="text-lg text-gray-400 font-bold">Chưa có phim nào trong tủ.</p>
-                  <button onClick={() => navigate('/')} className="mt-4 text-red-500 hover:underline font-bold text-sm">Khám phá ngay</button>
+              <div className="py-20 text-center border-2 border-dashed border-white/10 rounded-2xl bg-white/5">
+                  <FaHeart className="text-6xl mx-auto mb-4 text-gray-600 opacity-50"/>
+                  <p className="text-xl font-bold text-gray-400">Tủ phim trống trơn</p>
+                  <button onClick={() => navigate('/')} className="mt-6 bg-red-600 px-8 py-3 rounded-full font-bold hover:bg-red-700 transition text-white shadow-lg">Khám phá ngay</button>
               </div>
           )}
       </div>
 
-      {/* --- MODAL XÓA PHIM --- */}
+      {/* MODAL XÓA */}
       {showDeleteModal && (
-          <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fade-in">
-              <div className="bg-[#1a1a1a] border border-white/10 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center transform scale-100 transition-all">
-                  <div className="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+              <div className="bg-[#161616] border border-white/10 p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center transform scale-100 transition-all">
+                  <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
                       <FaExclamationTriangle className="text-3xl text-red-500" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Xóa khỏi tủ phim?</h3>
-                  <p className="text-gray-400 text-sm mb-6">Bạn có chắc chắn muốn xóa <span className="text-white font-bold">"{movieToDelete?.name}"</span> không?</p>
+                  <h3 className="text-xl font-bold text-white mb-2">Xác nhận xóa?</h3>
+                  <p className="text-gray-400 text-sm mb-6">Bạn có chắc chắn muốn xóa phim <span className="text-white font-bold">"{movieToDelete?.name}"</span> khỏi tủ phim không?</p>
                   <div className="flex gap-3">
-                      <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-2.5 rounded-xl font-bold text-gray-400 bg-[#222] hover:bg-[#333] transition">Hủy bỏ</button>
-                      <button onClick={confirmDelete} className="flex-1 py-2.5 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition shadow-lg">Xóa ngay</button>
+                      <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-3 rounded-xl font-bold text-gray-400 bg-white/5 hover:bg-white/10 transition">Hủy bỏ</button>
+                      <button onClick={confirmDelete} className="flex-1 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition shadow-lg shadow-red-900/20">Xóa ngay</button>
                   </div>
               </div>
           </div>
       )}
 
-      {/* --- MODAL CHỈNH SỬA (Giữ nguyên) --- */}
+      {/* MODAL SỬA */}
       {showEdit && (
-          // Copy lại đoạn Modal Edit từ file cũ vào đây (giữ nguyên logic)
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
-             <div className="bg-[#111] w-full max-w-4xl h-[650px] rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row">
-                 {/* Sidebar & Content (Copy lại y nguyên) */}
-                  <div className="w-full md:w-72 bg-[#0f0f0f] border-b md:border-b-0 md:border-r border-white/10 p-6 flex flex-col">
-                      <div className="mb-8">
-                          <h3 className="text-xl font-bold text-white">Cài đặt tài khoản</h3>
-                          <p className="text-xs text-gray-500">Quản lý thông tin cá nhân</p>
-                      </div>
+             <div className="bg-[#0a0a0a] w-full max-w-4xl h-[650px] rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row relative">
+                 <button onClick={() => setShowEdit(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white z-50"><FaTimes size={20}/></button>
+
+                  <div className="w-full md:w-72 bg-black/40 border-b md:border-b-0 md:border-r border-white/10 p-6 flex flex-col">
+                      <div className="mb-8"><h3 className="text-xl font-bold text-white">Cài đặt tài khoản</h3></div>
                       <div className="space-y-2 flex-1">
                           <button onClick={() => setActiveTab('info')} className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition flex items-center gap-3 ${activeTab === 'info' ? 'bg-white text-black' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}><FaIdCard /> Thông tin chung</button>
                           <button onClick={() => setActiveTab('avatar')} className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition flex items-center gap-3 ${activeTab === 'avatar' ? 'bg-white text-black' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}><FaImage /> Ảnh đại diện</button>
                           <button onClick={() => setActiveTab('password')} className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition flex items-center gap-3 ${activeTab === 'password' ? 'bg-white text-black' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}><FaLock /> Bảo mật</button>
                       </div>
-                      <button onClick={() => setShowEdit(false)} className="mt-auto w-full py-3 rounded-xl font-bold text-sm text-gray-400 hover:bg-white/5 hover:text-white transition border border-white/10">Đóng</button>
                   </div>
-                  <div className="flex-1 bg-[#0a0a0a] relative flex flex-col">
+                  
+                  <div className="flex-1 bg-transparent relative flex flex-col">
                       <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
                           <form onSubmit={handleUpdate} id="profile-form">
                               {activeTab === 'info' && (
                                   <div className="space-y-6 animate-fade-in">
                                       <h2 className="text-2xl font-bold text-white mb-2">Thông tin chung</h2>
-                                      <div><label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tên hiển thị</label><input type="text" className="w-full bg-[#161616] border border-white/10 rounded-xl py-4 px-5 text-white focus:border-red-600 outline-none transition font-medium" value={formData.fullname} onChange={(e) => setFormData({...formData, fullname: e.target.value})} /></div>
-                                      <div><label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email</label><input type="text" disabled className="w-full bg-[#161616]/50 border border-transparent rounded-xl py-4 px-5 text-gray-500 cursor-not-allowed" value={user.email} /></div>
+                                      <div><label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tên hiển thị</label><input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-5 text-white focus:border-red-600 outline-none transition font-medium" value={formData.fullname} onChange={(e) => setFormData({...formData, fullname: e.target.value})} /></div>
+                                      <div><label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email</label><input type="text" disabled className="w-full bg-black/40 border border-transparent rounded-xl py-4 px-5 text-gray-500 cursor-not-allowed" value={user.email} /></div>
                                   </div>
                               )}
                               {activeTab === 'avatar' && (
                                   <div className="space-y-6 animate-fade-in">
                                       <h2 className="text-2xl font-bold text-white mb-2">Ảnh đại diện</h2>
                                       <div className="flex items-center gap-6 mb-8">
-                                          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-red-600 bg-black shadow-xl"><img src={formData.avatar} alt="Preview" className="w-full h-full object-cover" /></div>
+                                          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-red-600 bg-black shadow-xl">
+                                              {formData.avatar ? <img src={formData.avatar} className="w-full h-full object-cover"/> : <UserAvatar user={{fullname: formData.fullname}} className="w-full h-full" />}
+                                          </div>
                                           <div onClick={() => fileInputRef.current.click()} className="flex-1 border-2 border-dashed border-white/20 rounded-xl h-24 flex flex-col items-center justify-center cursor-pointer hover:border-red-600 hover:bg-red-600/5 transition group"><FaCloudUploadAlt className="text-2xl text-gray-400 group-hover:text-red-500 mb-1" /><p className="text-xs text-gray-300 font-bold">Tải ảnh lên</p><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} /></div>
                                       </div>
                                       <div>
@@ -245,14 +266,14 @@ const Profile = () => {
                                   <div className="space-y-6 animate-fade-in">
                                       <h2 className="text-2xl font-bold text-white mb-2">Bảo mật</h2>
                                       <div className="space-y-4">
-                                          <input type="password" placeholder="Mật khẩu mới" className="w-full bg-[#161616] border border-white/10 rounded-xl py-4 px-5 text-white focus:border-red-600 outline-none transition" value={formData.newPassword} onChange={(e) => setFormData({...formData, newPassword: e.target.value})} />
-                                          <input type="password" placeholder="Nhập lại mật khẩu mới" className="w-full bg-[#161616] border border-white/10 rounded-xl py-4 px-5 text-white focus:border-red-600 outline-none transition" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
+                                          <input type="password" placeholder="Mật khẩu mới" className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-5 text-white focus:border-red-600 outline-none transition" value={formData.newPassword} onChange={(e) => setFormData({...formData, newPassword: e.target.value})} />
+                                          <input type="password" placeholder="Nhập lại mật khẩu mới" className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-5 text-white focus:border-red-600 outline-none transition" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
                                       </div>
                                   </div>
                               )}
                           </form>
                       </div>
-                      <div className="p-6 border-t border-white/10 flex justify-end bg-[#111]">
+                      <div className="p-6 border-t border-white/10 flex justify-end bg-black/20">
                           <button onClick={handleUpdate} disabled={isSaving} className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-red-900/20 transition flex items-center gap-2 disabled:opacity-50">{isSaving ? 'Đang lưu...' : <><FaSave /> Lưu Thay Đổi</>}</button>
                       </div>
                   </div>

@@ -149,3 +149,10 @@ export const clearWatchHistory = async () => {
         throw error;
     }
 };
+export const removeWatchHistoryItem = async (slug) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        await axios.delete(`${USER_URL}/history/${slug}`, getAuthHeader());
+    } catch (error) { throw error; }
+};

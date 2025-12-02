@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getComments, addComment, deleteComment, toggleLikeComment } from '../../services/commentService';
 import { getCurrentUser } from '../../services/authService';
-import { FaPaperPlane, FaTrashAlt, FaUserCircle, FaComments, FaThumbsUp, FaReply, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaPaperPlane, FaTrashAlt, FaComments, FaThumbsUp, FaReply, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+// --- QUAN TRỌNG: IMPORT USER AVATAR ---
+import UserAvatar from '../common/UserAvatar';
 
-// Hàm tính thời gian
 const timeAgo = (dateString) => {
     if (!dateString) return '';
     let dateStr = String(dateString);
@@ -101,8 +102,10 @@ const CommentSection = ({ movieSlug, episodeSlug }) => {
 
       return (
           <div className={`flex gap-3 group ${isReply ? 'mt-4' : 'mt-6'}`}>
+              {/* Avatar Comment */}
               <div className={`flex-shrink-0 ${isReply ? 'w-6 h-6' : 'w-10 h-10'} rounded-full overflow-hidden border border-white/10 bg-gray-800`}>
-                   <img src={cmt.avatar} alt={cmt.username} className="w-full h-full object-cover" />
+                   {/* Sử dụng UserAvatar thay vì img */}
+                   <UserAvatar user={cmt} className="w-full h-full" fontSize={isReply ? "text-xs" : "text-sm"} />
               </div>
               
               <div className="flex-1">
@@ -110,15 +113,11 @@ const CommentSection = ({ movieSlug, episodeSlug }) => {
                       <span className={`font-bold text-white ${isReply ? 'text-xs' : 'text-sm'} cursor-pointer hover:underline`}>
                           {cmt.fullname || cmt.username}
                       </span>
-                      
-                      {/* --- SỬA ĐOẠN NÀY: HIỂN THỊ ADMIN --- */}
                       {cmt.role === 'admin' && (
                           <span className="bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider border border-red-500/50 shadow-sm">
                               ADMIN
                           </span>
                       )}
-                      {/* ------------------------------------- */}
-
                       <span className="text-[11px] text-gray-400">{timeAgo(cmt.created_at)}</span>
                   </div>
 
@@ -146,7 +145,10 @@ const CommentSection = ({ movieSlug, episodeSlug }) => {
 
                   {replyTo === cmt.id && (
                       <form onSubmit={(e) => handleSubmit(e, cmt.id)} className="mt-3 flex gap-3 animate-fade-in items-start">
-                           <div className="w-6 h-6 rounded-full overflow-hidden border border-white/10 flex-shrink-0"><img src={user?.avatar} className="w-full h-full object-cover" /></div>
+                           <div className="w-6 h-6 rounded-full overflow-hidden border border-white/10 flex-shrink-0">
+                                {/* Avatar người đang reply */}
+                                <UserAvatar user={user} className="w-full h-full" fontSize="text-xs" />
+                           </div>
                           <div className="flex-1 relative">
                               <input autoFocus type="text" className="w-full bg-transparent border-b border-white/20 py-1 px-2 text-sm text-white focus:border-white outline-none transition-colors placeholder-gray-500" placeholder="Thêm phản hồi công khai..." value={replyContent} onChange={(e) => setReplyContent(e.target.value)} />
                               <div className="flex justify-end gap-2 mt-2">
@@ -183,7 +185,8 @@ const CommentSection = ({ movieSlug, episodeSlug }) => {
 
         <div className="flex gap-4 mb-8">
             <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 flex-shrink-0 bg-gray-800">
-                {user ? <img src={user.avatar} alt="Me" className="w-full h-full object-cover" /> : <FaUserCircle className="w-full h-full text-gray-500 p-1" />}
+                {/* Avatar User Chính */}
+                <UserAvatar user={user} className="w-full h-full" />
             </div>
             <form onSubmit={(e) => handleSubmit(e, null)} className="flex-1">
                 <div className="relative group">
@@ -208,7 +211,6 @@ const CommentSection = ({ movieSlug, episodeSlug }) => {
             {rootComments.length > 0 ? rootComments.map(cmt => (
                 <CommentItem key={cmt.id} cmt={cmt} />
             )) : (
-                // Căn giữa thông báo trống
                 <div className="flex flex-col items-center justify-center py-12 text-gray-500 border border-dashed border-white/10 rounded-xl bg-white/5">
                     <FaComments className="text-4xl mb-3 opacity-30" />
                     <p className="text-sm font-medium">Chưa có bình luận nào.</p>
