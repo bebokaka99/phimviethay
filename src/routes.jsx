@@ -7,14 +7,13 @@ import SearchPage from "./pages/SearchPage";
 import Catalog from "./pages/Catalog";
 import NotFound from "./pages/NotFound";
 
-// --- BỔ SUNG 2 DÒNG IMPORT NÀY ---
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Favorites from "./pages/Favorites";
-// ---------------------------------
+
 import History from "./pages/History";
-// ADMIN PAGES
+
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
@@ -22,7 +21,7 @@ import Comments from "./pages/admin/Comments";
 
 export const router = createBrowserRouter([
   {
-    element: <MainLayout />, // Bọc tất cả trong Layout
+    element: <MainLayout />, 
     children: [
       { path: "/", element: <Home /> },
       { path: "/phim/:slug", element: <MovieDetail /> },
@@ -54,8 +53,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       // --- ROUTE MỚI ---
-      { path: "users", element: <Users /> },       // /admin/users
-      { path: "comments", element: <Comments /> }, // /admin/comments
+      { path: "users", element: <Users /> },   
+      { path: "comments", element: <Comments /> }, 
     ]
   },
 

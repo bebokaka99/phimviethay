@@ -12,7 +12,7 @@ const getAuthHeader = () => {
     return { 
         headers: { 
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json' // <--- THÊM DÒNG NÀY CHO CHẮC
+            'Content-Type': 'application/json' 
         } 
     };
 };
@@ -113,7 +113,7 @@ export const updateProfile = async (data) => {
     }
 };
 
-// --- HISTORY API (CHỈ GIỮ 1 HÀM DUY NHẤT NÀY) ---
+// --- HISTORY API ---
 
 export const setWatchHistory = async (data) => { // <--- Nhận object data
     const token = localStorage.getItem('token');

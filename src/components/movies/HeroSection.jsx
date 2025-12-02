@@ -1,169 +1,191 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// Bỏ import getTmdbDetails
-import { IMG_URL, getMovieDetail } from '../../services/movieService'; 
 import { FaPlay, FaInfoCircle, FaStar } from 'react-icons/fa';
+import { IMG_URL, getMovieDetail } from '../../services/movieService';
 
 const HeroSection = ({ movies }) => {
-  const navigate = useNavigate();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [heroMovies, setHeroMovies] = useState([]);
+    const navigate = useNavigate();
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [heroMovies, setHeroMovies] = useState([]);
 
-  useEffect(() => {
-    const fetchHighQualityImages = async () => {
-        if (!movies || movies.length === 0) return;
+    // Xử lý lấy dữ liệu chi tiết cho 5 phim đầu để có ảnh chất lượng cao
+    useEffect(() => {
+        const fetchHighQualityImages = async () => {
+            if (!movies || movies.length === 0) return;
 
-        const top5 = movies.slice(0, 5);
-        
-        const updatedMovies = await Promise.all(top5.map(async (movie) => {
-            try {
-                // Gọi API chi tiết OPhim để lấy ảnh poster_url chuẩn
-                const data = await getMovieDetail(movie.slug);
-                if (data?.status && data?.movie) {
-                    return {
-                        ...movie,
-                        poster_url: data.movie.poster_url, 
-                        tmdb: data.movie.tmdb,
-                        content: data.movie.content // Lấy nội dung đầy đủ
-                    };
+            const top5 = movies.slice(0, 5);
+            
+            const updatedMovies = await Promise.all(top5.map(async (movie) => {
+                try {
+                    const data = await getMovieDetail(movie.slug);
+                    if (data?.status && data?.movie) {
+                        return {
+                            ...movie,
+                            poster_url: data.movie.poster_url,
+                            tmdb: data.movie.tmdb,
+                            content: data.movie.content
+                        };
+                    }
+                    return movie;
+                } catch (e) {
+                    return movie;
                 }
-                return movie;
-            } catch (e) {
-                return movie;
-            }
-        }));
+            }));
 
-        setHeroMovies(updatedMovies);
+            setHeroMovies(updatedMovies);
+        };
+
+        fetchHighQualityImages();
+    }, [movies]);
+
+    // Tự động chuyển slide mỗi 8 giây
+    useEffect(() => {
+        if (heroMovies.length === 0) return;
+        
+        const interval = setInterval(() => {
+            setCurrentIndex(prev => (prev === heroMovies.length - 1 ? 0 : prev + 1));
+        }, 8000);
+        
+        return () => clearInterval(interval);
+    }, [currentIndex, heroMovies]);
+
+    // Helper loại bỏ thẻ HTML trong nội dung mô tả
+    const stripHtml = (html) => {
+        if (!html) return "";
+        return html.replace(/<[^>]*>?/gm, '');
     };
 
-    fetchHighQualityImages();
-  }, [movies]);
+    if (heroMovies.length === 0) return null;
 
-  useEffect(() => {
-    if (heroMovies.length === 0) return;
-    const interval = setInterval(() => {
-        setCurrentIndex(prev => (prev === heroMovies.length - 1 ? 0 : prev + 1));
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [currentIndex, heroMovies]);
+    // Xác định dữ liệu phim hiện tại
+    const movie = heroMovies[currentIndex];
+    
+    // Xử lý logic hiển thị ảnh (ưu tiên ảnh từ chi tiết phim nếu có)
+    const backdropImg = movie.poster_url && movie.poster_url.includes('http')
+        ? movie.poster_url
+        : `${IMG_URL}${movie.poster_url || movie.thumb_url}`;
 
-  if (heroMovies.length === 0) return null;
+    const posterImg = `${IMG_URL}${movie.thumb_url}`;
 
-  const movie = heroMovies[currentIndex];
-  
-  const backdropImg = movie.poster_url && movie.poster_url.includes('http') 
-      ? movie.poster_url 
-      : `${IMG_URL}${movie.poster_url || movie.thumb_url}`;
+    const ratingValue = movie.tmdb?.vote_average || movie.vote_average || 0;
+    const displayRating = ratingValue > 0 ? ratingValue.toFixed(1) : 'N/A';
 
-  const posterImg = `${IMG_URL}${movie.thumb_url}`;
+    const handleNavigate = () => {
+        navigate(`/phim/${movie.slug}`);
+    };
 
-  const handleNavigate = () => {
-      navigate(`/phim/${movie.slug}`);
-  };
-
-  const ratingValue = movie.tmdb?.vote_average || movie.vote_average || 0;
-  const displayRating = ratingValue > 0 ? ratingValue.toFixed(1) : 'N/A';
-
-  const stripHtml = (html) => {
-      if (!html) return "";
-      return html.replace(/<[^>]*>?/gm, '');
-  }
-
-  return (
-    <div className="relative h-[500px] md:h-[700px] w-full text-white overflow-hidden group">
-      
-      {/* BACKGROUND */}
-      <div 
-        key={movie._id + '-bg'} 
-        className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
-        style={{ backgroundImage: `url(${backdropImg})` }}
-      >
-         <div className="absolute inset-0 bg-gradient-to-r from-[#0a0e17] via-[#0a0e17]/60 to-transparent backdrop-blur-[1px]" /> 
-      </div>
-      
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-transparent to-transparent" />
-
-      {/* MAIN CONTENT */}
-      <div className="absolute inset-0 flex items-center justify-center pb-8 md:pb-0">
-        <div className="w-full max-w-[1500px] mx-auto px-6 md:px-16 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 mt-10 md:mt-0">
+    return (
+        <div className="relative h-[500px] md:h-[700px] w-full text-white overflow-hidden group">
             
-            {/* CỘT TRÁI */}
-            <div key={movie._id + '-text'} className="w-full md:w-[60%] space-y-6 z-10 animate-fade-up-custom">
-                <h1 
-                    onClick={handleNavigate}
-                    className="text-3xl md:text-5xl font-black leading-snug drop-shadow-2xl text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 py-2 cursor-pointer hover:opacity-80 transition line-clamp-2"
-                    title={movie.name} 
-                >
-                  {movie.name}
-                </h1>
-                
-                <div className="flex flex-wrap items-center gap-3 text-sm md:text-base font-medium text-gray-200">
-                    <span className="flex items-center gap-1 text-yellow-400 font-bold text-lg">
-                        <FaStar /> {displayRating}
-                    </span>
-                    <span className="bg-white/10 border border-white/10 px-3 py-1 rounded">
-                        {movie.year}
-                    </span>
-                    <span className="bg-red-600 px-3 py-1 rounded text-white font-bold uppercase tracking-wider shadow-lg shadow-red-900/40">
-                        {movie.quality || 'HD'}
-                    </span>
-                     <span className="text-gray-300 border border-gray-500 px-3 py-1 rounded uppercase">
-                        {movie.lang}
-                    </span>
-                </div>
+            {/* Background Image với hiệu ứng fade */}
+            <div
+                key={movie._id + '-bg'}
+                className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
+                style={{ backgroundImage: `url(${backdropImg})` }}
+            >
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0a0e17] via-[#0a0e17]/60 to-transparent backdrop-blur-[1px]" />
+            </div>
 
-                <p className="text-gray-300 text-base md:text-lg line-clamp-3 leading-relaxed max-w-xl drop-shadow-md pb-2">
-                   {stripHtml(movie.content) || `Trải nghiệm điện ảnh đỉnh cao với ${movie.name}.`}
-                </p>
+            {/* Gradient phủ mờ dưới đáy */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-transparent to-transparent" />
 
-                <div className="flex gap-4 pt-2">
-                    <button onClick={handleNavigate} className="bg-red-600 text-white px-8 py-3 md:px-10 md:py-4 rounded-full hover:bg-red-700 transition font-bold flex items-center gap-3 shadow-xl shadow-red-900/40 transform hover:scale-105 text-base md:text-lg">
-                        <FaPlay /> XEM NGAY
-                    </button>
-                    <button onClick={handleNavigate} className="bg-white/10 text-white px-8 py-3 md:px-10 md:py-4 rounded-full hover:bg-white/20 transition backdrop-blur-md font-bold flex items-center gap-3 border border-white/20 text-base md:text-lg">
-                        <FaInfoCircle /> CHI TIẾT
-                    </button>
+            {/* Nội dung chính */}
+            <div className="absolute inset-0 flex items-center justify-center pb-8 md:pb-0">
+                <div className="w-full max-w-[1500px] mx-auto px-6 md:px-16 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 mt-10 md:mt-0">
+                    
+                    {/* Cột trái: Thông tin phim */}
+                    <div key={movie._id + '-text'} className="w-full md:w-[60%] space-y-6 z-10 animate-fade-up-custom">
+                        <h1
+                            onClick={handleNavigate}
+                            className="text-3xl md:text-5xl font-black leading-snug drop-shadow-2xl text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 py-2 cursor-pointer hover:opacity-80 transition line-clamp-2"
+                            title={movie.name}
+                        >
+                            {movie.name}
+                        </h1>
+
+                        <div className="flex flex-wrap items-center gap-3 text-sm md:text-base font-medium text-gray-200">
+                            <span className="flex items-center gap-1 text-yellow-400 font-bold text-lg">
+                                <FaStar /> {displayRating}
+                            </span>
+                            <span className="bg-white/10 border border-white/10 px-3 py-1 rounded">
+                                {movie.year}
+                            </span>
+                            <span className="bg-red-600 px-3 py-1 rounded text-white font-bold uppercase tracking-wider shadow-lg shadow-red-900/40">
+                                {movie.quality || 'HD'}
+                            </span>
+                            <span className="text-gray-300 border border-gray-500 px-3 py-1 rounded uppercase">
+                                {movie.lang}
+                            </span>
+                        </div>
+
+                        <p className="text-gray-300 text-base md:text-lg line-clamp-3 leading-relaxed max-w-xl drop-shadow-md pb-2">
+                            {stripHtml(movie.content) || `Trải nghiệm điện ảnh đỉnh cao với ${movie.name}.`}
+                        </p>
+
+                        <div className="flex gap-4 pt-2">
+                            <button 
+                                onClick={handleNavigate} 
+                                className="bg-red-600 text-white px-8 py-3 md:px-10 md:py-4 rounded-full hover:bg-red-700 transition font-bold flex items-center gap-3 shadow-xl shadow-red-900/40 transform hover:scale-105 text-base md:text-lg"
+                            >
+                                <FaPlay /> XEM NGAY
+                            </button>
+                            <button 
+                                onClick={handleNavigate} 
+                                className="bg-white/10 text-white px-8 py-3 md:px-10 md:py-4 rounded-full hover:bg-white/20 transition backdrop-blur-md font-bold flex items-center gap-3 border border-white/20 text-base md:text-lg"
+                            >
+                                <FaInfoCircle /> CHI TIẾT
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Cột phải: Poster (Chỉ hiện trên desktop) */}
+                    <div key={movie._id + '-poster'} className="hidden md:flex w-full md:w-[40%] justify-end relative z-10 animate-poster-custom pr-8">
+                        <div 
+                            onClick={handleNavigate} 
+                            className="w-[280px] aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/10 transform rotate-3 hover:rotate-0 transition duration-700 ease-out group-hover:scale-105 cursor-pointer"
+                        >
+                            <img src={posterImg} alt={movie.name} className="w-full h-full object-cover" />
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* CỘT PHẢI: POSTER */}
-            <div key={movie._id + '-poster'} className="hidden md:flex w-full md:w-[40%] justify-end relative z-10 animate-poster-custom pr-8">
-                <div onClick={handleNavigate} className="w-[280px] aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/10 transform rotate-3 hover:rotate-0 transition duration-700 ease-out group-hover:scale-105 cursor-pointer">
-                     <img src={posterImg} alt={movie.name} className="w-full h-full object-cover" />
-                </div>
+            {/* Thumbnail Navigation (Góc dưới phải) */}
+            <div className="absolute bottom-8 right-12 z-20 hidden xl:flex items-center gap-3">
+                {heroMovies.map((m, idx) => {
+                    let thumbWide = `${IMG_URL}${m.poster_url || m.thumb_url}`;
+                    if (m.poster_url && m.poster_url.includes('http')) {
+                        thumbWide = m.poster_url;
+                    }
+
+                    const isActive = idx === currentIndex;
+
+                    return (
+                        <div
+                            key={m._id}
+                            onClick={() => setCurrentIndex(idx)}
+                            className={`relative w-24 h-14 rounded-md overflow-hidden cursor-pointer transition-all duration-300 ease-out ${
+                                isActive
+                                    ? 'scale-110 -translate-y-1 shadow-lg border border-white/50 z-10 opacity-100'
+                                    : 'opacity-60 hover:opacity-100 hover:scale-105 grayscale hover:grayscale-0 border border-white/10'
+                            }`}
+                        >
+                            <img src={thumbWide} alt="" className="w-full h-full object-cover" />
+                            {isActive && (
+                                <div 
+                                    className="absolute bottom-0 left-0 h-[3px] bg-red-600 z-20" 
+                                    style={{ width: '100%', animation: 'loadingBar 8s linear infinite' }} 
+                                />
+                            )}
+                        </div>
+                    );
+                })}
             </div>
+
+            {/* Animation style nội bộ */}
+            <style>{`@keyframes loadingBar { from { width: 0%; } to { width: 100%; } }`}</style>
         </div>
-      </div>
-
-      {/* THUMBNAIL NAVIGATION */}
-      <div className="absolute bottom-8 right-12 z-20 hidden xl:flex items-center gap-3">
-          {heroMovies.map((m, idx) => {
-            let thumbWide = `${IMG_URL}${m.poster_url || m.thumb_url}`;
-            if (m.poster_url && m.poster_url.includes('http')) {
-                thumbWide = m.poster_url;
-            }
-
-            return (
-                <div 
-                    key={m._id}
-                    onClick={() => setCurrentIndex(idx)}
-                    className={`relative w-24 h-14 rounded-md overflow-hidden cursor-pointer transition-all duration-300 ease-out ${
-                        idx === currentIndex 
-                        ? 'scale-110 -translate-y-1 shadow-lg border border-white/50 z-10 opacity-100' 
-                        : 'opacity-60 hover:opacity-100 hover:scale-105 grayscale hover:grayscale-0 border border-white/10' 
-                    }`}
-                >
-                    <img src={thumbWide} alt="" className="w-full h-full object-cover" />
-                     {idx === currentIndex && (
-                        <div className="absolute bottom-0 left-0 h-[3px] bg-red-600 z-20" style={{width: '100%', animation: 'loadingBar 8s linear infinite'}}></div>
-                    )}
-                </div>
-            );
-          })}
-      </div>
-      <style>{`@keyframes loadingBar { from { width: 0%; } to { width: 100%; } }`}</style>
-    </div>
-  );
+    );
 };
 
 export default HeroSection;

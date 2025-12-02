@@ -24,7 +24,6 @@ export const getComments = async (slug, episode = null) => {
 
 export const addComment = async (data) => {
     try {
-        // Đã xóa console.log rác ở đây
         const res = await axios.post(`${BASE_URL}/comments`, data, getAuthHeader());
         return res.data;
     } catch (error) { throw error; }
