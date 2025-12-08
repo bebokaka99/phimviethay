@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { FaMicrophone, FaList, FaStepForward, FaForward, FaTimes } from 'react-icons/fa';
 import { MdReplay10, MdForward10 } from 'react-icons/md';
 
-import siteLogo from '../assets/logo.png'; 
+import siteLogo from '../assets/logo.png';
 
 // --- CSS GIAO DIỆN ---
 const STYLES = `
@@ -131,7 +131,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
     const isAutoNextVisible = useRef(false);
     const autoNextTimer = useRef(null);
     const switchTimeRef = useRef(0);
-    
+
     const episodesRef = useRef(episodes);
     const currentEpRef = useRef(currentEp);
 
@@ -155,7 +155,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
     const renderServerList = () => {
         if (!servers?.length) return '<div style="color:#888; padding:20px; text-align:center; font-size:12px;">Đang tải...</div>';
         return servers.map((s, idx) => `
-            <div class="server-item" data-index="${idx}" style="padding: 10px; margin-bottom: 5px; border-radius: 4px; cursor: pointer; background: ${idx === currentServerIndex ? '#dc2626' : 'rgba(255,255,255,0.05)'}; color: ${idx === currentServerIndex ? '#fff' : '#ccc'}; font-size: 13px; display: flex; justify-content: space-between; border: 1px solid ${idx === currentServerIndex ? '#dc2626' : 'transparent'};"><span>${s.server_name || `Server ${idx+1}`}</span></div>
+            <div class="server-item" data-index="${idx}" style="padding: 10px; margin-bottom: 5px; border-radius: 4px; cursor: pointer; background: ${idx === currentServerIndex ? '#dc2626' : 'rgba(255,255,255,0.05)'}; color: ${idx === currentServerIndex ? '#fff' : '#ccc'}; font-size: 13px; display: flex; justify-content: space-between; border: 1px solid ${idx === currentServerIndex ? '#dc2626' : 'transparent'};"><span>${s.server_name || `Server ${idx + 1}`}</span></div>
         `).join('');
     };
 
@@ -176,10 +176,10 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
             container: artRef.current,
             url: option.url,
             autoPlayback: false, autoplay: false, muted: false,
-            fullscreen: true, 
+            fullscreen: true,
             fullscreenWeb: false,
             theme: '#dc2626',
-            
+
             // --- CẤU HÌNH MOBILE (QUAN TRỌNG) ---
             mobile: {
                 gesture: true, // Cho phép vuốt tăng giảm âm lượng/độ sáng
@@ -187,7 +187,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
                 lock: false,
             },
 
-            controls: [], 
+            controls: [],
             customType: {
                 m3u8: function (video, url, art) {
                     if (Hls.isSupported()) {
@@ -206,10 +206,10 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
 
         art.controls.add({ name: 'rewind-10', position: 'left', index: 10, html: icons.rewind, tooltip: '-10s', style: { padding: '0 5px' }, click: () => art.currentTime -= 10 });
         art.controls.add({ name: 'forward-10', position: 'left', index: 11, html: icons.forward, tooltip: '+10s', style: { padding: '0 5px' }, click: () => art.currentTime += 10 });
-        
+
         art.controls.add({ name: 'next-ep', position: 'left', index: 12, html: icons.nextEp, tooltip: 'Next Ep', style: { padding: '0 5px', opacity: hasNextEp ? 1 : 0.5 }, click: () => hasNextEp && onNextEp && onNextEp() });
         art.controls.add({ name: 'skip-intro', position: 'right', index: 10, html: `<div class="skip-intro-btn">${icons.skipIntro}</div>`, tooltip: 'Skip Intro', style: { padding: '0 5px' }, click: () => { art.currentTime += 85; art.notice.show = 'Skipped Intro'; } });
-        
+
         art.controls.add({ name: 'ep-list', position: 'right', index: 20, html: icons.list, tooltip: 'List', style: { padding: '0 5px' }, click: () => togglePanel('episode-panel') });
         art.controls.add({ name: 'server-list', position: 'right', index: 21, html: icons.server, tooltip: 'Server', style: { padding: '0 5px' }, click: () => togglePanel('server-panel') });
 
@@ -219,7 +219,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
                 const p = art.layers[name];
                 if (!p) return;
                 const drawer = p.querySelector('.art-panel-drawer');
-                
+
                 if (name === targetName) {
                     if (p.style.display === 'none') {
                         p.style.display = 'block';
@@ -238,12 +238,14 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
         };
 
         // Init Layers
-        art.layers.add({ name: 'server-panel', html: createPanelHTML('Server', 'server-content'), style: { display: 'none', zIndex: 170, pointerEvents: 'none', inset: 0, position: 'absolute' }, mounted: ($el) => { $el.querySelector('.close-panel').onclick = () => togglePanel('server-panel'); }});
-        art.layers.add({ name: 'episode-panel', html: createPanelHTML('Episodes', 'episode-content'), style: { display: 'none', zIndex: 170, pointerEvents: 'none', inset: 0, position: 'absolute' }, mounted: ($el) => { $el.querySelector('.close-panel').onclick = () => togglePanel('episode-panel'); }});
-        art.layers.add({ name: 'auto-next', html: AUTO_NEXT_HTML, style: { zIndex: 120, pointerEvents: 'none', width: '100%', height: '100%', position: 'absolute', inset: 0 }, mounted: ($el) => {
-            $el.querySelector('#btn-cancel-auto').onclick = () => { isAutoNextVisible.current = false; $el.querySelector('.auto-next-popup').style.transform = 'translateX(120%)'; clearInterval(autoNextTimer.current); };
-            $el.querySelector('#btn-now-auto').onclick = () => { if (hasNextEp && onNextEp) onNextEp(); };
-        }});
+        art.layers.add({ name: 'server-panel', html: createPanelHTML('Server', 'server-content'), style: { display: 'none', zIndex: 170, pointerEvents: 'none', inset: 0, position: 'absolute' }, mounted: ($el) => { $el.querySelector('.close-panel').onclick = () => togglePanel('server-panel'); } });
+        art.layers.add({ name: 'episode-panel', html: createPanelHTML('Episodes', 'episode-content'), style: { display: 'none', zIndex: 170, pointerEvents: 'none', inset: 0, position: 'absolute' }, mounted: ($el) => { $el.querySelector('.close-panel').onclick = () => togglePanel('episode-panel'); } });
+        art.layers.add({
+            name: 'auto-next', html: AUTO_NEXT_HTML, style: { zIndex: 120, pointerEvents: 'none', width: '100%', height: '100%', position: 'absolute', inset: 0 }, mounted: ($el) => {
+                $el.querySelector('#btn-cancel-auto').onclick = () => { isAutoNextVisible.current = false; $el.querySelector('.auto-next-popup').style.transform = 'translateX(120%)'; clearInterval(autoNextTimer.current); };
+                $el.querySelector('#btn-now-auto').onclick = () => { if (hasNextEp && onNextEp) onNextEp(); };
+            }
+        });
 
         art.on('video:timeupdate', () => {
             const key = getSafeStorageKey();
@@ -264,7 +266,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
                         autoNextTimer.current = setInterval(() => {
                             count--;
                             const offset = 81 - ((count / 90) * 81);
-                            if(ringEl) ringEl.style.strokeDashoffset = -offset;
+                            if (ringEl) ringEl.style.strokeDashoffset = -offset;
                             if (count <= 0) { clearInterval(autoNextTimer.current); if (hasNextEp && onNextEp) onNextEp(); }
                         }, 1000);
                     }
@@ -274,7 +276,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
 
         art.on('play', () => {
             isAutoNextVisible.current = false;
-            try { art.layers['auto-next'].querySelector('.auto-next-popup').style.transform = 'translateX(120%)'; } catch(e){}
+            try { art.layers['auto-next'].querySelector('.auto-next-popup').style.transform = 'translateX(120%)'; } catch (e) { }
         });
 
         art.on('ready', () => {
@@ -290,34 +292,34 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
                 return;
             }
             const savedTime = parseFloat(localStorage.getItem(key));
-            try { art.layers.remove('resume-popup'); } catch (e) {}
+            try { art.layers.remove('resume-popup'); } catch (e) { }
             if (savedTime && savedTime > 10) {
-                if(art.template.$state) art.template.$state.style.display = 'none'; 
+                if (art.template.$state) art.template.$state.style.display = 'none';
                 art.layers.add({
-                    name: 'resume-popup', html: RESUME_POPUP_HTML, 
-                    style: { zIndex: 180, position: 'absolute', inset: 0, pointerEvents: 'none' }, 
+                    name: 'resume-popup', html: RESUME_POPUP_HTML,
+                    style: { zIndex: 180, position: 'absolute', inset: 0, pointerEvents: 'none' },
                     mounted: ($el) => {
-                        const d = new Date(savedTime*1000); 
-                        const timeStr = d.getUTCHours() > 0 ? `${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2,'0')}:${String(d.getUTCSeconds()).padStart(2,'0')}` : `${String(d.getUTCMinutes()).padStart(2,'0')}:${String(d.getUTCSeconds()).padStart(2,'0')}`;
+                        const d = new Date(savedTime * 1000);
+                        const timeStr = d.getUTCHours() > 0 ? `${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')}` : `${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')}`;
                         $el.querySelector('#resume-time').innerText = timeStr;
                         const play = (t) => {
-                            if(art.template.$state) art.template.$state.style.display = '';
+                            if (art.template.$state) art.template.$state.style.display = '';
                             art.currentTime = t;
                             art.play().catch(() => { art.muted = true; art.play(); });
-                            try { art.layers.remove('resume-popup'); } catch (e) {}
+                            try { art.layers.remove('resume-popup'); } catch (e) { }
                         };
                         $el.querySelector('#btn-restart').onclick = () => { play(0); localStorage.removeItem(key); };
                         $el.querySelector('#btn-resume').onclick = () => play(savedTime);
                     }
                 });
             } else if (option.autoplay) {
-                 art.play().catch(() => { art.muted = true; art.play(); });
+                art.play().catch(() => { art.muted = true; art.play(); });
             }
         });
 
         playerRef.current = art;
         return () => { clearInterval(autoNextTimer.current); if (art && art.destroy) art.destroy(false); };
-    }, []); 
+    }, []);
 
     // --- CẬP NHẬT LIST ---
     useEffect(() => {
@@ -330,8 +332,8 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
             const container = panel.querySelector('.custom-scrollbar');
             if (container) {
                 container.innerHTML = html;
-                const items = isServer 
-                    ? container.querySelectorAll('.server-item') 
+                const items = isServer
+                    ? container.querySelectorAll('.server-item')
                     : container.querySelectorAll('.episode-item');
 
                 Array.from(items).forEach(item => {
@@ -339,7 +341,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
                         const panelEl = panel.querySelector('.art-panel-drawer');
                         panelEl.style.right = '-100%';
                         setTimeout(() => panel.style.display = 'none', 300);
-                        
+
                         if (isServer) {
                             switchTimeRef.current = art.currentTime;
                             const idx = parseInt(item.getAttribute('data-index'));
@@ -363,7 +365,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
         if (!art || !option.url || art.url === option.url) return;
         isAutoNextVisible.current = false;
         clearInterval(autoNextTimer.current);
-        try { art.layers['auto-next'].querySelector('.auto-next-popup').style.transform = 'translateX(120%)'; } catch(e){}
+        try { art.layers['auto-next'].querySelector('.auto-next-popup').style.transform = 'translateX(120%)'; } catch (e) { }
         art.switchUrl(option.url).then(() => {
             if (switchTimeRef.current > 0) { art.currentTime = switchTimeRef.current; }
         });

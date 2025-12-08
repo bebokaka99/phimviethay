@@ -61,7 +61,6 @@ export const getTmdbDetails = async (movie) => {
             // 2.2: Nếu không ra -> Tìm Tên Gốc (Bỏ năm) -> Fix lỗi lệch năm
             // VD: OPhim ghi 2025, TMDB ghi 2024 -> Bước này sẽ tìm ra "Bugonia"
             if (!result) {
-                console.log("Thử tìm không cần năm:", movie.origin_name);
                 result = await searchTMDB(movie.origin_name);
             }
 

@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { 
-    FaPlay, FaList, FaLightbulb, FaStar, FaStepForward, 
-    FaArrowLeft, FaExpand, FaClock, FaGlobe, FaUsers, FaHeart 
+import {
+    FaPlay, FaList, FaLightbulb, FaStar, FaStepForward,
+    FaArrowLeft, FaExpand, FaClock, FaGlobe, FaUsers, FaHeart
 } from 'react-icons/fa';
 
 import Header from '../components/layout/Header';
 import MovieRow from '../components/movies/MovieRow';
 import CommentSection from '../components/comments/CommentSection';
 // Import VideoPlayer mới
-import VideoPlayer from '../components/VideoPlayer'; 
+import VideoPlayer from '../components/VideoPlayer';
 
 import { getMovieDetail, getMoviesBySlug, getMoviePeoples, IMG_URL, increaseView } from '../services/movieService';
 import { setWatchHistory, checkFavoriteStatus, toggleFavorite } from '../services/authService';
@@ -35,7 +35,7 @@ const WatchMovie = () => {
     const { slug } = useParams();
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
-    
+
     const currentEpSlug = searchParams.get('tap');
     const viewCountedRef = useRef(false);
     const playerRef = useRef(null);
@@ -44,7 +44,7 @@ const WatchMovie = () => {
     const [movie, setMovie] = useState(null);
     const [episodes, setEpisodes] = useState([]);
     const [currentEpisode, setCurrentEpisode] = useState(null);
-    
+
     // --- 1. LOGIC LƯU SERVER (F5 KHÔNG MẤT) ---
     const [currentServer, setCurrentServer] = useState(() => {
         try {
@@ -93,7 +93,7 @@ const WatchMovie = () => {
                     // Xác định tập hiện tại
                     // Ưu tiên lấy từ server đang chọn, nếu server đó không có (do lỗi) thì về server 0
                     const serverData = data.episodes?.[currentServer]?.server_data || data.episodes?.[0]?.server_data || [];
-                    
+
                     if (serverData.length > 0) {
                         let foundEp = serverData.find(e => e.slug === currentEpSlug);
                         if (!foundEp) foundEp = serverData[0];
@@ -117,7 +117,7 @@ const WatchMovie = () => {
 
                     // Lấy thông tin bổ sung
                     getMoviePeoples(slug).then(res => setCasts(res || []));
-                    
+
                     const favStatus = await checkFavoriteStatus(data.movie.slug);
                     setIsFavorite(favStatus);
 
@@ -136,10 +136,10 @@ const WatchMovie = () => {
                     const saved = JSON.parse(localStorage.getItem(key)) || [];
                     setWatchedEpisodes(saved);
                 }
-            } catch (error) { 
-                console.error(error); 
-            } finally { 
-                setLoading(false); 
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
             }
         };
         fetchData();
@@ -151,10 +151,10 @@ const WatchMovie = () => {
             // Logic an toàn để lấy server hiện tại hoặc server 0
             const safeServerIndex = episodes[currentServer] ? currentServer : 0;
             const serverData = episodes[safeServerIndex]?.server_data || [];
-            
+
             if (currentEpSlug) {
                 const found = serverData.find(e => e.slug === currentEpSlug);
-                
+
                 if (found) {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                     setCurrentEpisode(found);
@@ -192,12 +192,12 @@ const WatchMovie = () => {
             const rating = movie.tmdb?.vote_average || movie.vote_average || 0;
             const currentEpName = currentEpisode?.name || 'Full';
             const newStatus = await toggleFavorite({
-                slug: movie.slug, 
-                name: movie.name, 
-                thumb_url: movie.thumb_url, 
-                quality: movie.quality, 
-                year: movie.year, 
-                episode_current: currentEpName, 
+                slug: movie.slug,
+                name: movie.name,
+                thumb_url: movie.thumb_url,
+                quality: movie.quality,
+                year: movie.year,
+                episode_current: currentEpName,
                 vote_average: rating
             });
             setIsFavorite(newStatus);
@@ -211,15 +211,15 @@ const WatchMovie = () => {
     // --- LOGIC TÌM TẬP TIẾP THEO ---
     const getNextEpisode = () => {
         if (!episodes || episodes.length === 0 || !currentEpisode) return null;
-        
+
         // Logic an toàn: Ưu tiên server hiện tại, fallback về server 0
         const safeServerIndex = episodes[currentServer] ? currentServer : 0;
         const serverData = episodes[safeServerIndex]?.server_data || [];
-        
+
         if (serverData.length === 0) return null;
 
         const currentIndex = serverData.findIndex(e => e.slug === currentEpisode.slug);
-        
+
         // Nếu tìm thấy và không phải tập cuối cùng
         if (currentIndex !== -1 && currentIndex < serverData.length - 1) {
             return serverData[currentIndex + 1];
@@ -233,7 +233,7 @@ const WatchMovie = () => {
 
     // Tính toán tập tiếp theo trước khi render
     const nextEp = getNextEpisode();
-    
+
     const bgImage = `${IMG_URL}${movie.poster_url || movie.thumb_url}`;
     const pageTitle = `Xem phim ${movie.name} - Tập ${currentEpisode?.name} | PhimVietHay`;
     const rating = movie.tmdb?.vote_average || movie.vote_average || 0;
@@ -257,7 +257,7 @@ const WatchMovie = () => {
             )}
 
             <div className={`transition-all duration-500 relative z-[100] ${isLightOff ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}></div>
-            
+
             {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg('')} />}
 
             <div className={`fixed inset-0 bg-black/95 z-40 transition-opacity duration-700 pointer-events-none ${isLightOff ? 'opacity-100' : 'opacity-0'}`} />
@@ -267,28 +267,28 @@ const WatchMovie = () => {
 
                     {/* --- LEFT COLUMN: PLAYER & INFO --- */}
                     <div className={`w-full ${isTheater || isLightOff ? 'lg:w-[100%]' : 'lg:w-[75%]'} transition-all duration-500`}>
-                        
+
                         {/* VIDEO PLAYER AREA */}
                         <div className="relative w-full aspect-video bg-black md:rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 group z-20">
                             {currentEpisode ? (
-                                <VideoPlayer 
+                                <VideoPlayer
                                     key={currentEpisode.slug} // Reset player khi đổi tập
-                                    
+
                                     // === QUAN TRỌNG: TRUYỀN TÊN PHIM ĐỂ LƯU KEY DUY NHẤT ===
-                                    movieSlug={movie.slug} 
+                                    movieSlug={movie.slug}
                                     // ========================================================
 
-                                    episodes={episodes[currentServer]?.server_data || []} 
-                                    servers={episodes} 
-                                    currentEp={currentEpisode} 
-                                    currentServerIndex={currentServer} 
-                                    
-                                    onEpChange={(ep) => handleChangeEpisode(ep)} 
-                                    onServerChange={(index) => setCurrentServer(index)} 
-                                    
-                                    hasNextEp={!!nextEp} 
+                                    episodes={episodes[currentServer]?.server_data || []}
+                                    servers={episodes}
+                                    currentEp={currentEpisode}
+                                    currentServerIndex={currentServer}
+
+                                    onEpChange={(ep) => handleChangeEpisode(ep)}
+                                    onServerChange={(index) => setCurrentServer(index)}
+
+                                    hasNextEp={!!nextEp}
                                     onNextEp={() => {
-                                        if(nextEp) handleChangeEpisode(nextEp);
+                                        if (nextEp) handleChangeEpisode(nextEp);
                                     }}
 
                                     option={{
@@ -379,7 +379,7 @@ const WatchMovie = () => {
                                         </div>
                                     )}
                                 </div>
-                                
+
                                 <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
                                     <div className="grid grid-cols-4 lg:grid-cols-4 gap-2">
                                         {displayEpisodes?.server_data?.map((ep) => {
@@ -393,9 +393,9 @@ const WatchMovie = () => {
                                                     className={`
                                                         relative h-9 rounded text-xs font-bold transition-all border
                                                         ${isActive
-                                                            ? 'bg-red-600 text-white border-red-600 shadow-lg z-10' 
+                                                            ? 'bg-red-600 text-white border-red-600 shadow-lg z-10'
                                                             : isWatched
-                                                                ? 'bg-[#333] text-gray-500 border-[#444]' 
+                                                                ? 'bg-[#333] text-gray-500 border-[#444]'
                                                                 : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10 hover:text-white'
                                                         }
                                                     `}
