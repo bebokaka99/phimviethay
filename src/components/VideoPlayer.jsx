@@ -60,10 +60,10 @@ const STYLES = `
     /* 4. Icon Skip Intro */
     .skip-intro-btn {
         display: flex; align-items: center; justify-content: center;
-        width: 30px; height: 30px; background: rgba(255, 255, 255, 0.15);
+        width: 30px; height: 30px;
         border-radius: 50%; transition: background 0.3s;
     }
-    .skip-intro-btn:hover { background: #dc2626; }
+    
 
     /* --- MOBILE RESPONSIVE --- */
     @media (max-width: 768px) {
