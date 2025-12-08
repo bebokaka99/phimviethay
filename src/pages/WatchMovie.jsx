@@ -14,6 +14,7 @@ import { getMovieDetail, getMoviesBySlug, getMoviePeoples, IMG_URL, increaseView
 import { setWatchHistory, checkFavoriteStatus, toggleFavorite } from '../services/authService';
 
 // --- SUB-COMPONENT: TOAST NOTIFICATION ---
+// Đã giữ nguyên logic này, nó sẽ được gọi đúng cách ở bên dưới
 const Toast = ({ message, onClose }) => {
     useEffect(() => {
         const t = setTimeout(onClose, 3000);
@@ -21,8 +22,8 @@ const Toast = ({ message, onClose }) => {
     }, [onClose]);
 
     return (
-        <div className="fixed top-20 right-4 z-[200] bg-black/90 border-l-4 border-phim-accent text-white px-4 py-3 rounded shadow-2xl flex items-center gap-3 animate-fade-in-down max-w-[90vw]">
-            <div className="bg-phim-accent p-1 rounded-full"><FaHeart className="text-white text-[10px]" /></div>
+        <div className="fixed top-20 right-4 z-[200] bg-black/90 border-l-4 border-red-600 text-white px-4 py-3 rounded shadow-2xl flex items-center gap-3 animate-fade-in-down max-w-[90vw]">
+            <div className="bg-red-600 p-1 rounded-full"><FaHeart className="text-white text-[10px]" /></div>
             <span className="text-sm font-medium line-clamp-1">{message}</span>
         </div>
     );
@@ -35,7 +36,7 @@ const WatchMovie = () => {
     const navigate = useNavigate();
     
     const currentEpSlug = searchParams.get('tap');
-    const viewCountedRef = useRef(false); // Ref để đảm bảo view chỉ tăng 1 lần
+    const viewCountedRef = useRef(false);
     const playerRef = useRef(null);
 
     // Data States
@@ -54,7 +55,7 @@ const WatchMovie = () => {
 
     // User Data States
     const [isFavorite, setIsFavorite] = useState(false);
-    const [watchedEpisodes, setWatchedEpisodes] = useState([]); // Danh sách tập đã xem (Local Storage)
+    const [watchedEpisodes, setWatchedEpisodes] = useState([]);
 
     // Helper: Show Toast
     const showToast = (msg) => setToastMsg(msg);
@@ -63,6 +64,7 @@ const WatchMovie = () => {
 
     // 1. FETCH DATA & INIT VIEW
     useEffect(() => {
+        // Scroll lên đầu khi mới vào trang (chưa có tập cụ thể)
         if (!currentEpSlug) window.scrollTo(0, 0);
 
         const fetchData = async () => {
@@ -96,17 +98,27 @@ const WatchMovie = () => {
                         viewCountedRef.current = true;
                     }
 
-                    // Lấy thông tin bổ sung (Cast, Favorite, Related)
+                    // Lấy thông tin bổ sung (Cast, Favorite)
                     getMoviePeoples(slug).then(res => setCasts(res || []));
                     
                     const favStatus = await checkFavoriteStatus(data.movie.slug);
                     setIsFavorite(favStatus);
 
+                    // --- XỬ LÝ RELATED MOVIES RANDOM ---
                     if (data.movie.category?.[0]) {
                         const catSlug = data.movie.category[0].slug;
-                        const relatedData = await getMoviesBySlug(catSlug, 1, 'the-loai');
+                        
+                        // Lấy ngẫu nhiên trang từ 1 đến 5 để đa dạng nguồn phim
+                        const randomPage = Math.floor(Math.random() * 5) + 1;
+                        
+                        const relatedData = await getMoviesBySlug(catSlug, randomPage, 'the-loai');
                         if (relatedData?.data?.items) {
-                            setRelatedMovies(relatedData.data.items.filter(m => m.slug !== data.movie.slug));
+                            let items = relatedData.data.items.filter(m => m.slug !== data.movie.slug);
+                            
+                            // Xáo trộn mảng (Shuffle) để hiển thị ngẫu nhiên
+                            items = items.sort(() => Math.random() - 0.5);
+                            
+                            setRelatedMovies(items);
                         }
                     }
 
@@ -127,6 +139,9 @@ const WatchMovie = () => {
     // 2. SYNC EPISODE & SAVE HISTORY
     useEffect(() => {
         if (episodes.length > 0 && currentEpSlug) {
+            // --- SCROLL LÊN ĐẦU TRANG KHI ĐỔI TẬP ---
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
             const serverData = episodes[currentServer]?.server_data || [];
             const found = serverData.find(e => e.slug === currentEpSlug);
             
@@ -143,7 +158,7 @@ const WatchMovie = () => {
                         episodeName: found.name
                     });
 
-                    // B. Lưu tập đã xem vào LocalStorage (Client - để hiển thị màu xám)
+                    // B. Lưu tập đã xem vào LocalStorage
                     const key = `watched_${movie._id}`;
                     const currentList = JSON.parse(localStorage.getItem(key)) || [];
                     if (!currentList.includes(found.slug)) {
@@ -160,6 +175,7 @@ const WatchMovie = () => {
     const handleChangeEpisode = (ep) => {
         setCurrentEpisode(ep);
         setSearchParams({ tap: ep.slug });
+        // Logic scroll đã được đưa vào useEffect để xử lý cả khi back/forward trình duyệt
     };
 
     const handleToggleFavorite = async () => {
@@ -219,8 +235,11 @@ const WatchMovie = () => {
             )}
 
             {/* Toast & Overlay */}
+            {/* SỬA: Dùng component Toast thay vì div cứng để kích hoạt logic tắt tự động */}
             <div className={`transition-all duration-500 relative z-[100] ${isLightOff ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}></div>
-            {toastMsg && <div className="fixed top-20 right-4 z-[200] bg-black/90 border-l-4 border-red-600 text-white px-4 py-3 rounded shadow-2xl flex items-center gap-3 animate-fade-in-down"><FaHeart className="text-red-600" />{toastMsg}</div>}
+            
+            {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg('')} />}
+
             <div className={`fixed inset-0 bg-black/95 z-40 transition-opacity duration-700 pointer-events-none ${isLightOff ? 'opacity-100' : 'opacity-0'}`} />
 
             {/* Main Content */}
