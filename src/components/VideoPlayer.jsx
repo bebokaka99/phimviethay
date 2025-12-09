@@ -70,7 +70,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
 
         art.controls.add({ name: 'rewind-10', position: 'left', index: 10, html: renderToStaticMarkup(<MdReplay10 size={22} />), click: () => art.currentTime -= 10 });
         art.controls.add({ name: 'forward-10', position: 'left', index: 11, html: renderToStaticMarkup(<MdForward10 size={22} />), click: () => art.currentTime += 10 });
-        art.controls.add({ name: 'next-ep', position: 'left', index: 12, html: renderToStaticMarkup(<FaStepForward size={18} />), style: { opacity: hasNextEp ? 1 : 0.5 }, click: handleManualNext });
+        art.controls.add({ name: 'next-ep', position: 'left', index: 12, html: renderToStaticMarkup(<FaStepForward size={18} />), style: { opacity: hasNextEp ? 1 : 0.5 }, click: (art, e) => handleManualNext(e) });
         art.controls.add({ name: 'skip-intro', position: 'right', index: 10, html: renderToStaticMarkup(<div className="p-1 text-white opacity-80 cursor-pointer"><FaForward size={16} /></div>), click: () => art.currentTime += 85 });
         art.controls.add({ name: 'ep-list', position: 'right', index: 20, html: renderToStaticMarkup(<FaList size={16} />), click: () => togglePanel('episode-panel') });
         art.controls.add({ name: 'server-list', position: 'right', index: 21, html: renderToStaticMarkup(<FaMicrophone size={16} />), click: () => togglePanel('server-panel') });
