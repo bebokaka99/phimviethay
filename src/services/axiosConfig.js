@@ -1,12 +1,13 @@
 import axios from 'axios';
 
-// Tạo instance
+// TỰ ĐỘNG CHỌN URL DỰA TRÊN MÔI TRƯỜNG
+// Nếu có biến môi trường VITE_API_URL thì dùng, không thì dùng localhost
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const instance = axios.create({
-    baseURL: 'http://localhost:5000/api', 
+    baseURL: BASE_URL, 
     timeout: 10000,
-    headers: {
-        'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
 });
 
 // Biến cờ ngăn chặn redirect liên tục
