@@ -1,7 +1,7 @@
 import React from 'react';
 
-// 1. Skeleton cơ bản (Khối xám nhấp nháy)
-const SkeletonBox = ({ className }) => (
+// 1. Skeleton cơ bản (Khối xám nhấp nháy) -> Đã đổi tên thành Skeleton và Export
+export const Skeleton = ({ className }) => (
   <div className={`bg-gray-800/50 animate-pulse rounded-lg ${className}`}></div>
 );
 
@@ -10,13 +10,13 @@ export const MovieCardSkeleton = () => {
   return (
     <div className="flex flex-col gap-2">
       {/* Ảnh Poster */}
-      <SkeletonBox className="w-full aspect-[2/3] rounded-xl" />
+      <Skeleton className="w-full aspect-[2/3] rounded-xl" />
       {/* Tên phim */}
-      <SkeletonBox className="h-4 w-3/4 mt-1" />
+      <Skeleton className="h-4 w-3/4 mt-1" />
       {/* Năm/Info */}
       <div className="flex justify-between">
-          <SkeletonBox className="h-3 w-1/3" />
-          <SkeletonBox className="h-3 w-1/4" />
+          <Skeleton className="h-3 w-1/3" />
+          <Skeleton className="h-3 w-1/4" />
       </div>
     </div>
   );
@@ -44,20 +44,20 @@ export const HomeSkeleton = () => {
       <div className="relative w-full h-[500px] md:h-[700px] bg-gray-900 animate-pulse flex items-end pb-20 px-4 md:px-16">
            <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
                <div className="space-y-4">
-                   <SkeletonBox className="h-10 w-3/4 md:w-1/2" /> {/* Title */}
+                   <Skeleton className="h-10 w-3/4 md:w-1/2" /> {/* Title */}
                    <div className="flex gap-3">
-                       <SkeletonBox className="h-6 w-12" />
-                       <SkeletonBox className="h-6 w-12" />
-                       <SkeletonBox className="h-6 w-12" />
+                       <Skeleton className="h-6 w-12" />
+                       <Skeleton className="h-6 w-12" />
+                       <Skeleton className="h-6 w-12" />
                    </div>
-                   <SkeletonBox className="h-24 w-full" /> {/* Desc */}
+                   <Skeleton className="h-24 w-full" /> {/* Desc */}
                    <div className="flex gap-4 pt-2">
-                       <SkeletonBox className="h-12 w-32 rounded-full" />
-                       <SkeletonBox className="h-12 w-32 rounded-full" />
+                       <Skeleton className="h-12 w-32 rounded-full" />
+                       <Skeleton className="h-12 w-32 rounded-full" />
                    </div>
                </div>
                <div className="hidden md:block">
-                   <SkeletonBox className="w-[260px] aspect-[2/3] ml-auto rounded-2xl" />
+                   <Skeleton className="w-[260px] aspect-[2/3] ml-auto rounded-2xl" />
                </div>
            </div>
       </div>
@@ -67,8 +67,8 @@ export const HomeSkeleton = () => {
           {[1, 2].map((i) => (
               <div key={i}>
                   <div className="flex justify-between mb-4">
-                      <SkeletonBox className="h-8 w-48" />
-                      <SkeletonBox className="h-6 w-20" />
+                      <Skeleton className="h-8 w-48" />
+                      <Skeleton className="h-6 w-20" />
                   </div>
                   <div className="flex gap-4 overflow-hidden">
                       {Array(6).fill(0).map((_, j) => (
@@ -92,21 +92,21 @@ export const DetailSkeleton = () => {
             <div className="relative w-full h-[600px] md:h-[800px] bg-gray-900 animate-pulse flex items-end pb-12">
                  <div className="container mx-auto px-4 md:px-12 flex flex-col md:flex-row gap-10 items-center md:items-start">
                      {/* Poster */}
-                     <SkeletonBox className="w-[150px] md:w-[300px] aspect-[2/3] rounded-xl flex-shrink-0" />
+                     <Skeleton className="w-[150px] md:w-[300px] aspect-[2/3] rounded-xl flex-shrink-0" />
                      
                      {/* Info */}
                      <div className="flex-1 w-full space-y-6">
-                         <SkeletonBox className="h-12 w-3/4" /> {/* Title */}
-                         <SkeletonBox className="h-6 w-1/3" /> {/* Subtitle */}
+                         <Skeleton className="h-12 w-3/4" /> {/* Title */}
+                         <Skeleton className="h-6 w-1/3" /> {/* Subtitle */}
                          <div className="flex gap-4">
-                             <SkeletonBox className="h-8 w-16 rounded-full" />
-                             <SkeletonBox className="h-8 w-16 rounded-full" />
-                             <SkeletonBox className="h-8 w-16 rounded-full" />
+                             <Skeleton className="h-8 w-16 rounded-full" />
+                             <Skeleton className="h-8 w-16 rounded-full" />
+                             <Skeleton className="h-8 w-16 rounded-full" />
                          </div>
-                         <SkeletonBox className="h-32 w-full" /> {/* Desc */}
+                         <Skeleton className="h-32 w-full" /> {/* Desc */}
                          <div className="flex gap-4 pt-4">
-                             <SkeletonBox className="h-12 w-40 rounded-full" />
-                             <SkeletonBox className="h-12 w-12 rounded-full" />
+                             <Skeleton className="h-12 w-40 rounded-full" />
+                             <Skeleton className="h-12 w-12 rounded-full" />
                          </div>
                      </div>
                  </div>

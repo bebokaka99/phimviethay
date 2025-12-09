@@ -18,6 +18,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import Comments from "./pages/admin/Comments";
+import Intros from "./pages/admin/Intros";
 
 export const router = createBrowserRouter([
   {
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
       // --- ROUTE MỚI ---
       { path: "users", element: <Users /> },   
       { path: "comments", element: <Comments /> }, 
+      { path: "intros", element: <Intros /> },
     ]
   },
 

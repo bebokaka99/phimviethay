@@ -45,3 +45,43 @@ export const deleteAdminComment = async (id) => {
         return true;
     } catch (error) { return false; }
 };
+// 4. Analytics / God Mode
+export const forceIntroData = async (data) => {
+    try {
+        // Gọi axios instance hoặc axios thường đều được, nhưng dùng instance trong axiosConfig tốt hơn
+        // Ở đây mình dùng axios thường theo style file cũ của bạn
+        const response = await axios.post(`${BASE_URL}/analytics/admin/force`, data, getAuthHeader());
+        return response.data;
+    } catch (error) {
+        throw error.response?.data?.message || 'Lỗi lưu Intro';
+    }
+};
+// 5. Lấy danh sách Intro (Cập nhật)
+export const getIntrosList = async (page = 1, limit = 20, search = '', exactMovie = null) => {
+    try {
+        const params = { page, limit };
+        if (exactMovie) {
+            params.exact_movie = exactMovie; // Ưu tiên lọc chính xác
+        } else if (search) {
+            params.search = search;
+        }
+
+        const response = await axios.get(`${BASE_URL}/analytics/admin/list`, {
+            headers: getAuthHeader().headers,
+            params: params
+        });
+        return response.data;
+    } catch (error) {
+        return { data: [], pagination: {} };
+    }
+};
+
+// 6. Xóa dữ liệu Intro (MỚI)
+export const deleteIntroData = async (id) => {
+    try {
+        await axios.delete(`${BASE_URL}/analytics/admin/${id}`, getAuthHeader());
+        return true;
+    } catch (error) {
+        throw error.response?.data?.message || 'Lỗi xóa';
+    }
+};

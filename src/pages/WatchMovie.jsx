@@ -10,7 +10,7 @@ import Header from '../components/layout/Header';
 import MovieRow from '../components/movies/MovieRow';
 import CommentSection from '../components/comments/CommentSection';
 // Import VideoPlayer mới
-import VideoPlayer from '../components/VideoPlayer';
+import VideoPlayer from '../components/movies/VideoPlayer';
 
 import { getMovieDetail, getMoviesBySlug, getMoviePeoples, IMG_URL, increaseView } from '../services/movieService';
 import { setWatchHistory, checkFavoriteStatus, toggleFavorite } from '../services/authService';
@@ -55,7 +55,6 @@ const WatchMovie = () => {
         }
     });
 
-    // Lưu lại mỗi khi user đổi server
     useEffect(() => {
         localStorage.setItem('preferred_server', currentServer);
     }, [currentServer]);
@@ -73,9 +72,7 @@ const WatchMovie = () => {
     const [isFavorite, setIsFavorite] = useState(false);
     const [watchedEpisodes, setWatchedEpisodes] = useState([]);
 
-    // Helper: Show Toast
     const showToast = (msg) => setToastMsg(msg);
-    // Helper: Get Actor Image
     const getActorImg = (path) => path ? `https://image.tmdb.org/t/p/w200${path}` : null;
 
     // 1. FETCH DATA & INIT VIEW
@@ -91,8 +88,12 @@ const WatchMovie = () => {
                     setEpisodes(data.episodes || []);
 
                     // Xác định tập hiện tại
-                    // Ưu tiên lấy từ server đang chọn, nếu server đó không có (do lỗi) thì về server 0
-                    const serverData = data.episodes?.[currentServer]?.server_data || data.episodes?.[0]?.server_data || [];
+                    // Check server index hợp lệ
+                    const validServerIndex = (data.episodes && data.episodes[currentServer]) ? currentServer : 0;
+                    // Nếu server cũ ko hợp lệ -> reset về 0
+                    if (validServerIndex !== currentServer) setCurrentServer(0);
+
+                    const serverData = data.episodes?.[validServerIndex]?.server_data || [];
 
                     if (serverData.length > 0) {
                         let foundEp = serverData.find(e => e.slug === currentEpSlug);
@@ -208,11 +209,11 @@ const WatchMovie = () => {
         }
     };
 
-    // --- LOGIC TÌM TẬP TIẾP THEO ---
+    // --- LOGIC TÌM TẬP TIẾP THEO (ĐÃ FIX AN TOÀN) ---
     const getNextEpisode = () => {
         if (!episodes || episodes.length === 0 || !currentEpisode) return null;
 
-        // Logic an toàn: Ưu tiên server hiện tại, fallback về server 0
+        // Đảm bảo index hợp lệ
         const safeServerIndex = episodes[currentServer] ? currentServer : 0;
         const serverData = episodes[safeServerIndex]?.server_data || [];
 
@@ -231,15 +232,14 @@ const WatchMovie = () => {
     if (loading) return <div className="min-h-screen bg-transparent flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div></div>;
     if (!movie) return null;
 
-    // Tính toán tập tiếp theo trước khi render
     const nextEp = getNextEpisode();
-
     const bgImage = `${IMG_URL}${movie.poster_url || movie.thumb_url}`;
     const pageTitle = `Xem phim ${movie.name} - Tập ${currentEpisode?.name} | PhimVietHay`;
-    const rating = movie.tmdb?.vote_average || movie.vote_average || 0;
+    const ratingVal = movie.tmdb?.vote_average || movie.vote_average || 0;
     const voteCount = movie.tmdb?.vote_count || 0;
 
     // Lấy dữ liệu server để render list tập bên phải (Sidebar)
+    // Fix lỗi undefined khi switch server
     const displayEpisodes = episodes[currentServer] ? episodes[currentServer] : episodes[0];
 
     return (
@@ -274,9 +274,9 @@ const WatchMovie = () => {
                                 <VideoPlayer
                                     key={currentEpisode.slug} // Reset player khi đổi tập
 
-                                    // === QUAN TRỌNG: TRUYỀN TÊN PHIM ĐỂ LƯU KEY DUY NHẤT ===
+                                    // === QUAN TRỌNG: TRUYỀN TÊN PHIM ===
                                     movieSlug={movie.slug}
-                                    // ========================================================
+                                    // ====================================
 
                                     episodes={episodes[currentServer]?.server_data || []}
                                     servers={episodes}
@@ -286,6 +286,7 @@ const WatchMovie = () => {
                                     onEpChange={(ep) => handleChangeEpisode(ep)}
                                     onServerChange={(index) => setCurrentServer(index)}
 
+                                    // Truyền boolean rõ ràng
                                     hasNextEp={!!nextEp}
                                     onNextEp={() => {
                                         if (nextEp) handleChangeEpisode(nextEp);
@@ -337,7 +338,7 @@ const WatchMovie = () => {
                                     <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">{movie.name}</h1>
                                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300 mb-4">
                                         <span className="bg-red-600 text-white px-2.5 py-0.5 rounded font-bold text-xs shadow-sm shadow-red-900/20">{movie.quality || 'HD'}</span>
-                                        <span className="flex items-center gap-1 text-yellow-500 font-bold"><FaStar /> {rating > 0 ? rating.toFixed(1) : 'N/A'} <span className="text-gray-500 font-normal text-xs ml-1">({voteCount})</span></span>
+                                        <span className="flex items-center gap-1 text-yellow-500 font-bold"><FaStar /> {ratingVal > 0 ? ratingVal.toFixed(1) : 'N/A'} <span className="text-gray-500 font-normal text-xs ml-1">({voteCount})</span></span>
                                         <span className="flex items-center gap-1 text-gray-400"><FaClock className="text-red-600" /> {movie.time}</span>
                                         <span>{movie.year}</span>
                                         <span className="flex items-center gap-1"><FaGlobe className="text-red-600" /> {movie.country?.[0]?.name}</span>
@@ -382,13 +383,16 @@ const WatchMovie = () => {
 
                                 <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
                                     <div className="grid grid-cols-4 lg:grid-cols-4 gap-2">
-                                        {displayEpisodes?.server_data?.map((ep) => {
+                                        {/* SỬA LỖI DUPLICATE KEY Ở ĐÂY */}
+                                        {displayEpisodes?.server_data?.map((ep, idx) => {
                                             const isActive = currentEpisode?.slug === ep.slug;
                                             const isWatched = watchedEpisodes.includes(ep.slug);
+                                            // Sử dụng composite key để tránh trùng
+                                            const uniqueKey = `${ep.slug}-${idx}`;
 
                                             return (
                                                 <button
-                                                    key={ep.slug}
+                                                    key={uniqueKey} 
                                                     onClick={() => handleChangeEpisode(ep)}
                                                     className={`
                                                         relative h-9 rounded text-xs font-bold transition-all border
