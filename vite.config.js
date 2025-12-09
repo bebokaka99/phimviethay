@@ -36,4 +36,10 @@ export default defineConfig({
       }
     })
   ],
+  // --- THÊM PHẦN NÀY ---
+  build: {
+    // Tắt source map ở môi trường production (deploy)
+    // Giúp code build ra nhẹ hơn và hacker không thể xem code gốc (file .jsx) trong DevTools
+    sourcemap: false, 
+  }
 })

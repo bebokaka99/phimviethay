@@ -7,7 +7,6 @@ import {
     FaYoutube, FaHistory 
 } from 'react-icons/fa';
 
-import Header from '../components/layout/Header';
 import MovieRow from '../components/movies/MovieRow';
 import CommentSection from '../components/comments/CommentSection';
 
@@ -15,7 +14,7 @@ import { getMovieDetail, getMoviesBySlug, getMoviePeoples, getMovieImages, IMG_U
 import { checkFavoriteStatus, toggleFavorite, getWatchHistory, getCurrentUser } from '../services/authService';
 import { getTmdbDetails } from '../services/tmdbService';
 
-// --- SUB-COMPONENT: TOAST NOTIFICATION ---
+// --- TOAST NOTIFICATION ---
 const Toast = ({ message, onClose }) => {
     useEffect(() => {
         const t = setTimeout(onClose, 3000);
@@ -55,7 +54,6 @@ const MovieDetail = () => {
     const { slug } = useParams();
     const navigate = useNavigate();
     
-    // Data States
     const [movie, setMovie] = useState(null);
     const [episodes, setEpisodes] = useState([]);
     const [tmdbData, setTmdbData] = useState(null);
@@ -63,7 +61,6 @@ const MovieDetail = () => {
     const [casts, setCasts] = useState([]);
     const [gallery, setGallery] = useState([]);
     
-    // UI & User States
     const [loading, setLoading] = useState(true);
     const [isExpanded, setIsExpanded] = useState(false);
     const [toastMsg, setToastMsg] = useState('');
@@ -73,11 +70,11 @@ const MovieDetail = () => {
     const castRef = useRef(null);
     const galleryRef = useRef(null);
 
-    // Scroll to top khi đổi phim
     useEffect(() => { window.scrollTo(0, 0); }, [slug]);
 
-    // FETCH ALL DATA
     useEffect(() => {
+        let isMounted = true; // Biến cờ để ngăn update state khi component unmount (tránh loop)
+
         const fetchDetail = async () => {
             setLoading(true);
             setTmdbData(null);
@@ -85,51 +82,60 @@ const MovieDetail = () => {
             setContinueEp(null);
 
             try {
-                // 1. Lấy chi tiết phim từ OPhim
+                // 1. Lấy chi tiết phim (Public API - Không cần token)
                 const data = await getMovieDetail(slug);
+
+                if (!isMounted) return;
 
                 if (data?.status && data?.movie) {
                     setMovie(data.movie);
                     
-                    // 2. Lấy thông tin bổ sung từ TMDB (Rating, Trailer, Backdrop)
-                    const tmdbId = data.movie.tmdb?.id;
-                    const imdbId = data.movie.imdb?.id;
-                    const originalName = data.movie.origin_name;
-                    const year = data.movie.year;
-
-                    getTmdbDetails(tmdbId, imdbId, originalName, year).then(info => {
-                        if (info) setTmdbData(info);
+                    // TMDB Info
+                    const { tmdb, imdb, origin_name, year } = data.movie;
+                    getTmdbDetails(tmdb?.id, imdb?.id, origin_name, year).then(info => {
+                        if (isMounted && info) setTmdbData(info);
                     });
 
-                    // 3. Lấy Casts & Gallery
-                    getMoviePeoples(slug).then(res => { if(res && res.length > 0) setCasts(res); });
-                    getMovieImages(slug).then(res => { if(res && res.length > 0) setGallery(res); });
+                    // Casts & Gallery
+                    getMoviePeoples(slug).then(res => { if(isMounted && res?.length) setCasts(res); });
+                    getMovieImages(slug).then(res => { if(isMounted && res?.length) setGallery(res); });
 
-                    // 4. Lấy phim liên quan (cùng thể loại)
-                    if (data.movie.category && data.movie.category.length > 0) {
+                    // Related Movies
+                    if (data.movie.category?.length > 0) {
                         const randomCat = data.movie.category[Math.floor(Math.random() * data.movie.category.length)];
                         getMoviesBySlug(randomCat.slug, 1, 'the-loai').then(res => {
-                            if (res?.data?.items) {
+                            if (isMounted && res?.data?.items) {
                                 const related = res.data.items.filter(m => m.slug !== data.movie.slug).sort(() => 0.5 - Math.random());
                                 setRelatedMovies(related.slice(0, 10));
                             }
                         });
                     }
 
-                    // 5. Kiểm tra trạng thái yêu thích
-                    const favStatus = await checkFavoriteStatus(data.movie.slug);
-                    setIsFavorite(favStatus);
-
-                    // 6. Kiểm tra lịch sử xem để hiện nút "Xem tiếp"
+                    // --- CÁC API CẦN TOKEN (Auth) ---
+                    // Chúng ta bọc riêng trong try/catch để nếu lỗi 403 thì không chết cả trang
                     const currentUser = getCurrentUser();
                     if (currentUser) {
-                        const histories = await getWatchHistory();
-                        const historyItem = histories.find(h => h.movie_slug === data.movie.slug);
-                        if (historyItem) {
-                            setContinueEp({
-                                slug: historyItem.episode_slug,
-                                name: historyItem.episode_name 
-                            });
+                        try {
+                            const favStatus = await checkFavoriteStatus(data.movie.slug);
+                            if (isMounted) setIsFavorite(favStatus);
+                        } catch (err) {
+                            console.warn("Lỗi check favorite (có thể do hết phiên):", err);
+                            // Không làm gì cả, để Axios Interceptor lo việc hiện Modal
+                        }
+
+                        try {
+                            const histories = await getWatchHistory();
+                            if (isMounted && histories) {
+                                const historyItem = histories.find(h => h.movie_slug === data.movie.slug);
+                                if (historyItem) {
+                                    setContinueEp({
+                                        slug: historyItem.episode_slug,
+                                        name: historyItem.episode_name 
+                                    });
+                                }
+                            }
+                        } catch (err) {
+                            console.warn("Lỗi lấy lịch sử (có thể do hết phiên):", err);
                         }
                     }
 
@@ -139,14 +145,15 @@ const MovieDetail = () => {
             } catch (error) { 
                 console.error("Error fetching movie detail:", error); 
             } finally { 
-                setLoading(false); 
+                if (isMounted) setLoading(false); 
             }
         };
 
         if (slug) fetchDetail();
+
+        return () => { isMounted = false; };
     }, [slug]);
 
-    // --- HANDLERS ---
     const showToast = (msg) => setToastMsg(msg);
     
     const scrollCast = (ref, direction) => { 
@@ -171,8 +178,13 @@ const MovieDetail = () => {
             setIsFavorite(newStatus);
             showToast(newStatus ? 'Đã thêm vào danh sách yêu thích ❤️' : 'Đã xóa khỏi danh sách yêu thích 💔');
         } catch (error) {
-            showToast(error.toString());
-            if (error === "Vui lòng đăng nhập để lưu phim!") setTimeout(() => navigate('/login'), 1500);
+            // Nếu lỗi là do chưa đăng nhập hoặc hết phiên -> Chuyển hướng
+            if (error.response?.status === 401 || error.toString().includes("đăng nhập")) {
+                showToast("Vui lòng đăng nhập lại!");
+                // setTimeout(() => navigate('/login'), 1500); // Tạm tắt để Modal xử lý
+            } else {
+                showToast("Có lỗi xảy ra, thử lại sau!");
+            }
         }
     };
 
@@ -212,7 +224,6 @@ const MovieDetail = () => {
         </div>
     );
 
-    // Prepare Display Data
     const backdropImg = tmdbData?.backdrop || (movie.poster_url ? `${IMG_URL}${movie.poster_url}` : `${IMG_URL}${movie.thumb_url}`);
     const posterImg = `${IMG_URL}${movie.thumb_url}`;
     
@@ -235,7 +246,6 @@ const MovieDetail = () => {
 
             {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg('')} />}
             
-            {/* HERO SECTION */}
             <div className="relative w-full min-h-[100vh] md:min-h-[800px] flex items-end md:items-center">
                 <div className="absolute inset-0 bg-cover bg-center md:bg-top" style={{ backgroundImage: `url(${backdropImg})` }}>
                     <div className="absolute inset-0 bg-phim-dark/70 md:bg-phim-dark/50 backdrop-blur-[2px]" />
@@ -245,7 +255,6 @@ const MovieDetail = () => {
 
                 <div className="relative w-full container mx-auto px-4 md:px-12 pt-24 pb-12">
                     <div className="flex flex-col md:flex-row gap-6 md:gap-14 items-center md:items-start">
-                        {/* Poster */}
                         <div className="w-[150px] md:w-[320px] flex-shrink-0 relative z-20 shadow-2xl rounded-lg overflow-hidden border border-white/20 group">
                             <img src={posterImg} alt={movie.name} className="w-full h-full object-cover transform group-hover:scale-105 transition duration-500" />
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer md:hidden" onClick={handleWatchNow}>
@@ -253,7 +262,6 @@ const MovieDetail = () => {
                             </div>
                         </div>
 
-                        {/* Info */}
                         <div className="flex-1 space-y-5 md:space-y-7 z-20 text-center md:text-left w-full">
                             <div className="flex flex-wrap justify-center md:justify-start items-center gap-2 md:gap-3 text-xs md:text-sm font-medium text-gray-400">
                                 <span className="bg-red-600 text-white px-2.5 py-0.5 rounded font-bold border-none shadow-sm">{movie.quality}</span>
@@ -294,7 +302,6 @@ const MovieDetail = () => {
                                 </button>
                             </div>
                             
-                            {/* Action Buttons */}
                             <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-3">
                                 <button onClick={handleWatchNow} className="bg-phim-accent text-white px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-red-700 transition shadow-lg transform active:scale-95">
                                     {continueEp ? <><FaHistory /> XEM TIẾP {continueEp.name}</> : <><FaPlay /> XEM NGAY</>}
@@ -320,8 +327,6 @@ const MovieDetail = () => {
             </div>
 
             <div className="container mx-auto max-w-7xl px-4 md:px-12 -mt-6 relative z-30 space-y-12">
-                
-                {/* CAST SECTION */}
                 {casts && casts.length > 0 && (
                     <section className="relative group/cast">
                         <h3 className="text-lg md:text-xl font-bold mb-4 text-white border-l-4 border-phim-accent pl-3">Diễn viên & Đạo diễn</h3>
@@ -353,7 +358,6 @@ const MovieDetail = () => {
                     </section>
                 )}
 
-                {/* GALLERY SECTION */}
                 {gallery && gallery.length > 0 && (
                     <section className="relative group/gallery">
                         <h3 className="text-lg md:text-xl font-bold mb-4 text-white border-l-4 border-phim-accent pl-3">Hình ảnh phim</h3>
@@ -369,7 +373,6 @@ const MovieDetail = () => {
                     </section>
                 )}
 
-                {/* EPISODES SECTION */}
                 <section id="episodes-section" className="bg-gray-900/50 p-4 md:p-8 rounded-xl border border-white/5">
                     <h3 className="text-lg md:text-xl font-bold mb-5 flex items-center gap-2">
                         <FaPlay className="text-phim-accent text-sm" /> Danh sách tập
@@ -400,12 +403,10 @@ const MovieDetail = () => {
                     )}
                 </section>
 
-                {/* COMMENTS SECTION */}
                 <section id="comments-section" className="pt-8 border-t border-white/10">
                     <CommentSection movieSlug={slug} />
                 </section>
 
-                {/* RELATED MOVIES */}
                 {relatedMovies.length > 0 && (
                     <div className="mt-12 border-t border-white/10 pt-8 pb-10">
                         <MovieRow title="Có thể bạn muốn xem" movies={relatedMovies} slug={movie.category?.[0]?.slug} type="the-loai" />

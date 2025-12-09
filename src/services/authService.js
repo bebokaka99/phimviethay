@@ -1,27 +1,14 @@
-import axios from 'axios';
+// --- QUAN TRỌNG: Import từ file cấu hình của chúng ta ---
+import axios from './axiosConfig'; 
 
-// Vite sẽ tự động chọn link localhost hay link thật dựa vào môi trường chạy
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const AUTH_URL = `${BASE_URL}/auth`;
-const USER_URL = `${BASE_URL}/user`;
-
-// Helper lấy header
-const getAuthHeader = () => {
-    const token = localStorage.getItem('token');
-    return { 
-        headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json' 
-        } 
-    };
-};
+// Không cần BASE_URL nữa vì axios đã có sẵn
+// Không cần getAuthHeader nữa vì axios tự động gắn token
 
 // --- AUTH API ---
 
 export const register = async (userData) => {
     try {
-        const response = await axios.post(`${AUTH_URL}/register`, userData);
+        const response = await axios.post('/auth/register', userData);
         return response.data;
     } catch (error) {
         throw error.response?.data?.message || 'Lỗi kết nối server';
@@ -30,7 +17,7 @@ export const register = async (userData) => {
 
 export const login = async (userData) => {
     try {
-        const response = await axios.post(`${AUTH_URL}/login`, userData);
+        const response = await axios.post('/auth/login', userData);
         
         if (response.data.token) {
             localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -46,7 +33,7 @@ export const login = async (userData) => {
 export const logout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    window.location.reload();
+    window.location.href = '/login'; // Redirect cứng cho sạch
 };
 
 export const getCurrentUser = () => {
@@ -59,7 +46,8 @@ export const getCurrentUser = () => {
 
 export const getFavorites = async () => {
     try {
-        const response = await axios.get(`${USER_URL}/favorites`, getAuthHeader());
+        // Axios tự gắn token, không cần getAuthHeader()
+        const response = await axios.get('/user/favorites');
         return response.data;
     } catch (error) {
         return [];
@@ -69,23 +57,25 @@ export const getFavorites = async () => {
 export const checkFavoriteStatus = async (slug) => {
     if (!localStorage.getItem('token')) return false;
     try {
-        const response = await axios.get(`${USER_URL}/favorites/check/${slug}`, getAuthHeader());
+        const response = await axios.get(`/user/favorites/check/${slug}`);
         return response.data.isFavorite;
-    } catch (error) { return false; }
+    } catch (error) { 
+        return false; 
+    }
 };
 
 export const toggleFavorite = async (movie) => {
     if (!localStorage.getItem('token')) throw "Vui lòng đăng nhập để lưu phim!";
     
     try {
+        // Gọi lại hàm check đã sửa ở trên
         const isFav = await checkFavoriteStatus(movie.slug);
         
         if (isFav) {
-            await axios.delete(`${USER_URL}/favorites/${movie.slug}`, getAuthHeader());
+            await axios.delete(`/user/favorites/${movie.slug}`);
             return false; 
         } else {
-            // Gửi full data phim lên server
-            await axios.post(`${USER_URL}/favorites`, {
+            await axios.post('/user/favorites', {
                 slug: movie.slug,
                 name: movie.name,
                 thumb: movie.thumb_url,
@@ -93,7 +83,7 @@ export const toggleFavorite = async (movie) => {
                 year: movie.year,
                 episode_current: movie.episode_current,
                 vote_average: movie.vote_average
-            }, getAuthHeader());
+            });
             return true; 
         }
     } catch (error) {
@@ -103,7 +93,7 @@ export const toggleFavorite = async (movie) => {
 
 export const updateProfile = async (data) => {
     try {
-        const response = await axios.put(`${USER_URL}/profile`, data, getAuthHeader());
+        const response = await axios.put('/user/profile', data);
         if (response.data.user) {
             localStorage.setItem('user', JSON.stringify(response.data.user));
         }
@@ -115,13 +105,12 @@ export const updateProfile = async (data) => {
 
 // --- HISTORY API ---
 
-export const setWatchHistory = async (data) => { // <--- Nhận object data
+export const setWatchHistory = async (data) => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
     try {
-        // Gửi nguyên cục object data lên server
-        await axios.post(`${USER_URL}/history`, data, getAuthHeader());
+        await axios.post('/user/history', data);
     } catch (error) {
         console.error("Lỗi ghi lịch sử:", error);
     }
@@ -132,7 +121,7 @@ export const getWatchHistory = async () => {
     if (!token) return [];
 
     try {
-        const response = await axios.get(`${USER_URL}/history`, getAuthHeader());
+        const response = await axios.get('/user/history');
         return response.data;
     } catch (error) {
         return [];
@@ -144,15 +133,16 @@ export const clearWatchHistory = async () => {
     if (!token) return;
     
     try {
-        await axios.delete(`${USER_URL}/history`, getAuthHeader());
+        await axios.delete('/user/history');
     } catch (error) {
         throw error;
     }
 };
+
 export const removeWatchHistoryItem = async (slug) => {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-        await axios.delete(`${USER_URL}/history/${slug}`, getAuthHeader());
+        await axios.delete(`/user/history/${slug}`);
     } catch (error) { throw error; }
 };
