@@ -8,7 +8,8 @@ import { MdReplay10, MdForward10 } from 'react-icons/md';
 import siteLogo from '../../assets/logo.png';
 import { getCurrentUser } from '../../services/authService';
 import { forceIntroData } from '../../services/adminService';
-import { getEpisodeIntelligence, logUserBehavior } from '../../services/analyticsService';
+// CHỈ IMPORT GET DATA, KHÔNG IMPORT LOG
+import { getEpisodeIntelligence } from '../../services/analyticsService';
 
 const STYLES = `
     .art-panel-drawer { transition: right 0.3s ease; }
@@ -49,7 +50,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
     useEffect(() => { episodesRef.current = episodes; }, [episodes]);
     useEffect(() => { onNextEpRef.current = onNextEp; }, [onNextEp]);
 
-    // 1. RESET STATE
+    // 1. LẤY DỮ LIỆU TỪ SERVER KHI ĐỔI TẬP (Chỉ lấy, không gửi log)
     useEffect(() => {
         setUser(getCurrentUser());
         introDataRef.current = null;
@@ -65,7 +66,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
         }
     }, [movieSlug, currentEp]);
 
-    // 2. GOD MODE SHORTCUTS
+    // 2. GOD MODE (Dành cho Admin)
     useEffect(() => {
         if (!user || user.role !== 'admin') return;
 
@@ -73,12 +74,14 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
             const art = playerRef.current;
             if (!art) return;
 
+            // Alt + I
             if (e.altKey && e.key.toLowerCase() === 'i') {
                 e.preventDefault();
                 setTempStart(art.currentTime);
                 art.notice.show = `🚩 Start Intro: ${art.currentTime.toFixed(1)}s`;
             }
 
+            // Alt + O
             if (e.altKey && e.key.toLowerCase() === 'o') {
                 e.preventDefault();
                 const start = tempStart || 0;
@@ -97,6 +100,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
                 }
             }
 
+            // Alt + C
             if (e.altKey && e.key.toLowerCase() === 'c') {
                 e.preventDefault();
                 if (confirm(`💾 GOD MODE: Lưu Auto Next?\nTại: ${art.currentTime.toFixed(1)}s`)) {
@@ -117,6 +121,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [user, tempStart, movieSlug, currentEp]);
 
+    // Xử lý Skip Intro
     const handleSmartSkip = () => {
         const art = playerRef.current;
         const data = introDataRef.current;
@@ -124,7 +129,7 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
             art.currentTime = data.intro_end;
             art.play();
             setShowSmartSkip(false);
-            logUserBehavior({ movie_slug: movieSlug, episode_slug: currentEp?.slug, action_type: 'SKIP', timestamp: data.intro_start });
+            // ĐÃ XÓA LOG SKIP
         }
     };
 
@@ -133,14 +138,16 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
         return `art_time_v6_${movieSlug}_${currentEp.slug}`;
     };
 
+    // Xử lý Auto Next
     const handleManualNext = (e) => {
         if (e) e.stopPropagation();
-        logUserBehavior({ movie_slug: movieSlug, episode_slug: currentEp?.slug, action_type: 'NEXT', timestamp: playerRef.current?.currentTime || 0 });
+        // ĐÃ XÓA LOG NEXT
         if (hasNextEp && onNextEpRef.current) {
             onNextEpRef.current();
         }
     };
 
+    // Hàm kiểm tra thời gian (Core Logic)
     const checkTimeUpdate = (art) => {
         const currentTime = art.currentTime;
         const duration = art.duration;
@@ -204,10 +211,10 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
             },
         });
 
+        // Controls
         art.controls.add({ name: 'rewind-10', position: 'left', index: 10, html: renderToStaticMarkup(<MdReplay10 size={22} />), click: () => art.currentTime -= 10 });
         art.controls.add({ name: 'forward-10', position: 'left', index: 11, html: renderToStaticMarkup(<MdForward10 size={22} />), click: () => art.currentTime += 10 });
         art.controls.add({ name: 'next-ep', position: 'left', index: 12, html: renderToStaticMarkup(<FaStepForward size={18} />), style: { opacity: hasNextEp ? 1 : 0.5 }, click: (art, e) => handleManualNext(e) });
-        
         art.controls.add({ name: 'skip-intro', position: 'right', index: 10, html: renderToStaticMarkup(<div className="p-1 text-white opacity-80 cursor-pointer"><FaForward size={16} /></div>), click: () => art.currentTime += 85 });
         art.controls.add({ name: 'ep-list', position: 'right', index: 20, html: renderToStaticMarkup(<FaList size={16} />), click: () => togglePanel('episode-panel') });
         art.controls.add({ name: 'server-list', position: 'right', index: 21, html: renderToStaticMarkup(<FaMicrophone size={16} />), click: () => togglePanel('server-panel') });
@@ -242,8 +249,9 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
             checkTimeUpdate(art);
         });
 
+        // BẮT SỰ KIỆN SEEK NHƯNG KHÔNG GỬI LOG NỮA
         art.on('seeked', () => {
-            checkTimeUpdate(art);
+            checkTimeUpdate(art); // Chỉ để cập nhật UI nút Skip
         });
 
         art.on('ready', () => {
