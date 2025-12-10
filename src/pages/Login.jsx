@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { login } from '../services/authService';
+import { login, getCurrentUser } from '../services/authService';
 import { FaArrowLeft, FaUser, FaLock, FaPlayCircle, FaExclamationTriangle } from 'react-icons/fa';
 
 // Component Thông báo đẹp
@@ -27,11 +27,18 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showExpiredModal, setShowExpiredModal] = useState(false);
 
-  // Kiểm tra URL khi vào trang Login
+  // 1. Chặn truy cập nếu đã đăng nhập (Đá về trang chủ)
+  useEffect(() => {
+      const user = getCurrentUser();
+      if (user) {
+          navigate('/'); 
+      }
+  }, [navigate]);
+
+  // 2. Kiểm tra thông báo hết phiên từ URL
   useEffect(() => {
       if (searchParams.get('expired') === 'true') {
           setShowExpiredModal(true);
-          // Xóa param trên URL cho sạch
           window.history.replaceState({}, '', '/login');
       }
   }, [searchParams]);
@@ -42,9 +49,14 @@ const Login = () => {
       setLoading(true);
       try {
           await login(formData);
-          navigate('/');
+          
+          // --- [ĐÃ SỬA] ---
+          // Chuyển tất cả về Trang chủ, không phân biệt quyền hạn
+          navigate('/'); 
+          // ----------------
+
       } catch (err) {
-          setError(err.toString());
+          setError(err.response?.data?.message || err.toString());
       } finally {
           setLoading(false);
       }
@@ -52,11 +64,10 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center relative overflow-hidden font-sans">
-        {/* ... (Giữ nguyên phần background của bạn) ... */}
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 blur-sm scale-105 animate-pulse-slow"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40"></div>
 
-        {/* --- MODAL THÔNG BÁO HẾT PHIÊN --- */}
+        {/* Modal Hết phiên */}
         {showExpiredModal && <SessionExpiredAlert onClose={() => setShowExpiredModal(false)} />}
 
         <div className="relative z-10 w-full max-w-md p-8 md:p-10 bg-black/60 backdrop-blur-xl rounded-2xl shadow-[0_0_40px_rgba(229,9,20,0.2)] border border-white/10 animate-fade-in-up">
@@ -76,7 +87,6 @@ const Login = () => {
             {error && <div className="bg-red-600/20 text-red-400 p-4 rounded-lg text-sm mb-6 text-center border border-red-600/30 backdrop-blur-md flex items-center justify-center gap-2 animate-shake">⚠️ {error}</div>}
 
             <form onSubmit={handleSubmit} className="space-y-5">
-                {/* ... (Giữ nguyên form input của bạn) ... */}
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors">
                         <FaUser />

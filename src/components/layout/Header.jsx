@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // <--- IMPORT LINK
 import { 
     FaSearch, FaChevronDown, FaTimes, FaSpinner, FaBars, 
     FaChevronUp, FaList, FaHistory, FaUser, FaHeart, 
-    FaSignOutAlt, FaCog, FaFilm 
+    FaSignOutAlt, FaCog, FaFilm, FaChartBar 
 } from 'react-icons/fa';
 
 import { getMenuData, searchMovies } from '../../services/movieService';
@@ -99,12 +99,6 @@ const Header = () => {
         }
     };
 
-    const handleMovieClick = (slug) => {
-        navigate(`/phim/${slug}`);
-        setShowSearch(false);
-        setKeyword('');
-    };
-
     const toggleMobileSubmenu = (menuName) => {
         setActiveMobileSubmenu(activeMobileSubmenu === menuName ? '' : menuName);
     };
@@ -113,6 +107,7 @@ const Header = () => {
         logout();
         setUser(null);
         setMobileMenuOpen(false);
+        navigate('/login');
     };
 
     return (
@@ -129,23 +124,31 @@ const Header = () => {
                             <FaBars />
                         </button>
                         
-                        <div onClick={() => navigate('/')}>
+                        {/* 1. SỬA LOGO THÀNH LINK */}
+                        <Link to="/" className="block hover:opacity-90 transition">
                             <Logo />
-                        </div>
+                        </Link>
 
                         {/* Desktop Menu */}
                         <ul className="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-300 h-full">
-                            <li onClick={() => navigate('/')} className="hover:text-white cursor-pointer transition hover:scale-105">
-                                Trang chủ
+                            <li>
+                                <Link to="/" className="hover:text-white transition hover:scale-105 block py-6">
+                                    Trang chủ
+                                </Link>
                             </li>
                             
                             <li className="group relative h-full flex items-center hover:text-white cursor-pointer z-50">
                                 <span className="flex items-center gap-1 py-6">Danh sách <FaChevronDown size={8}/></span>
                                 <div className="absolute top-[80%] left-0 w-48 bg-[#111] border border-white/10 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-2 group-hover:translate-y-0 overflow-hidden py-2">
                                     {listItems.map((item) => (
-                                        <a key={item.slug} href={`/danh-sach/${item.slug}`} className="text-gray-400 hover:text-white hover:bg-white/5 text-sm block px-4 py-2 transition-colors">
+                                        // 2. SỬA DROPDOWN THÀNH LINK
+                                        <Link 
+                                            key={item.slug} 
+                                            to={`/danh-sach/${item.slug}`} 
+                                            className="text-gray-400 hover:text-white hover:bg-white/5 text-sm block px-4 py-2 transition-colors"
+                                        >
                                             {item.name}
-                                        </a>
+                                        </Link>
                                     ))}
                                 </div>
                             </li>
@@ -155,9 +158,13 @@ const Header = () => {
                                 <div className="absolute top-[80%] left-0 w-[600px] bg-[#111] border border-white/10 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-2 group-hover:translate-y-0 overflow-hidden p-4">
                                     <div className="grid grid-cols-4 gap-2">
                                         {menuData.theLoai.slice(0, 24).map((item) => (
-                                            <a key={item._id} href={`/the-loai/${item.slug}`} className="text-gray-400 hover:text-phim-accent text-sm block transition-colors hover:translate-x-1">
+                                            <Link 
+                                                key={item._id} 
+                                                to={`/the-loai/${item.slug}`} 
+                                                className="text-gray-400 hover:text-phim-accent text-sm block transition-colors hover:translate-x-1"
+                                            >
                                                 {item.name}
-                                            </a>
+                                            </Link>
                                         ))}
                                     </div>
                                 </div>
@@ -168,9 +175,13 @@ const Header = () => {
                                 <div className="absolute top-[80%] left-0 w-[400px] bg-[#111] border border-white/10 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-2 group-hover:translate-y-0 overflow-hidden p-4">
                                     <div className="grid grid-cols-3 gap-2">
                                         {menuData.quocGia.slice(0, 18).map((item) => (
-                                            <a key={item._id} href={`/quoc-gia/${item.slug}`} className="text-gray-400 hover:text-phim-accent text-sm block transition-colors hover:translate-x-1">
+                                            <Link 
+                                                key={item._id} 
+                                                to={`/quoc-gia/${item.slug}`} 
+                                                className="text-gray-400 hover:text-phim-accent text-sm block transition-colors hover:translate-x-1"
+                                            >
                                                 {item.name}
-                                            </a>
+                                            </Link>
                                         ))}
                                     </div>
                                 </div>
@@ -184,12 +195,12 @@ const Header = () => {
                             {showSearch ? (
                                 <form onSubmit={handleEnterSearch} className="flex-1 flex items-center w-full">
                                     <input 
-                                        type="text" 
-                                        placeholder="Tìm tên phim..." 
-                                        className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-500 font-medium" 
-                                        value={keyword} 
-                                        onChange={(e) => setKeyword(e.target.value)} 
-                                        autoFocus 
+                                            type="text" 
+                                            placeholder="Tìm tên phim..." 
+                                            className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-500 font-medium" 
+                                            value={keyword} 
+                                            onChange={(e) => setKeyword(e.target.value)} 
+                                            autoFocus 
                                     />
                                     {isSearching ? (
                                         <FaSpinner className="text-phim-accent animate-spin ml-2 text-xs" />
@@ -210,13 +221,19 @@ const Header = () => {
                                     {results.length > 0 ? (
                                         <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                                             {results.slice(0, 5).map((movie) => (
-                                                <div key={movie._id} onClick={() => handleMovieClick(movie.slug)} className="flex items-center gap-3 p-2 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0">
+                                                // 3. SỬA KẾT QUẢ TÌM KIẾM THÀNH LINK
+                                                <Link 
+                                                    key={movie._id} 
+                                                    to={`/phim/${movie.slug}`} 
+                                                    onClick={() => { setShowSearch(false); setKeyword(''); }}
+                                                    className="flex items-center gap-3 p-2 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0"
+                                                >
                                                     <img src={movie.thumb_url} alt="" className="w-8 h-10 object-cover rounded" />
                                                     <div className="flex-1 min-w-0">
                                                         <h4 className="text-sm text-white truncate">{movie.name}</h4>
                                                         <p className="text-[10px] text-gray-500 truncate">{movie.year}</p>
                                                     </div>
-                                                </div>
+                                                </Link>
                                             ))}
                                             <div onClick={(e) => handleEnterSearch(e)} className="p-2 text-center text-xs text-phim-accent font-bold cursor-pointer hover:bg-white/5">
                                                 Xem tất cả
@@ -236,18 +253,34 @@ const Header = () => {
                                 
                                 <div className="absolute top-full right-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 w-48 z-50">
                                     <div className="bg-[#161616] border border-white/10 rounded-lg shadow-xl overflow-hidden">
+                                        
+                                        {/* USER INFO */}
                                         <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
                                             <UserAvatar user={user} className="w-8 h-8" />
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-bold text-white truncate">{user.fullname || user.username}</p>
-                                                <p className="text-[10px] text-gray-500">Thành viên</p>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase">
+                                                    {user.role === 'super_admin' ? 'Super Admin' : user.role}
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="py-1">
-                                            <button onClick={() => navigate('/ho-so')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition flex items-center gap-2"><FaUser className="text-xs" /> Hồ sơ</button>
-                                            <button onClick={() => navigate('/tu-phim')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition flex items-center gap-2"><FaHeart className="text-xs" /> Tủ phim</button>
-                                            <button onClick={() => navigate('/lich-su')} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition flex items-center gap-2"><FaHistory className="text-xs" /> Lịch sử</button>
+
+                                        <div className="py-1 flex flex-col">
+                                            {/* 4. SỬA MENU USER THÀNH LINK */}
+                                            {(user.role === 'admin' || user.role === 'super_admin') && (
+                                                <Link 
+                                                    to="/admin" 
+                                                    className="w-full text-left px-4 py-2 text-sm text-yellow-500 hover:bg-white/5 hover:text-yellow-400 transition flex items-center gap-2 font-bold"
+                                                >
+                                                    <FaChartBar className="text-xs" /> Dashboard
+                                                </Link>
+                                            )}
+
+                                            <Link to="/ho-so" className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition flex items-center gap-2"><FaUser className="text-xs" /> Hồ sơ</Link>
+                                            <Link to="/tu-phim" className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition flex items-center gap-2"><FaHeart className="text-xs" /> Tủ phim</Link>
+                                            <Link to="/lich-su" className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition flex items-center gap-2"><FaHistory className="text-xs" /> Lịch sử</Link>
                                         </div>
+                                        
                                         <div className="border-t border-white/10 py-1">
                                             <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 transition flex items-center gap-2"><FaSignOutAlt className="text-xs" /> Đăng xuất</button>
                                         </div>
@@ -256,9 +289,9 @@ const Header = () => {
                             </div>
                         ) : (
                             <div className="flex items-center gap-3 ml-2">
-                                <button onClick={() => navigate('/login')} className="bg-phim-accent hover:bg-red-700 text-white text-xs font-bold px-4 py-1.5 rounded transition">
+                                <Link to="/login" className="bg-phim-accent hover:bg-red-700 text-white text-xs font-bold px-4 py-1.5 rounded transition">
                                     Đăng nhập
-                                </button>
+                                </Link>
                             </div>
                         )}
                     </div>
@@ -275,13 +308,13 @@ const Header = () => {
                 <div className="p-6 border-b border-white/10 bg-gradient-to-b from-black/40 to-transparent">
                     <div className="flex justify-between items-start mb-4">
                         {user ? (
-                            <div className="flex items-center gap-3" onClick={() => navigate('/ho-so')}>
+                            <Link to="/ho-so" className="flex items-center gap-3" onClick={() => setMobileMenuOpen(false)}>
                                 <UserAvatar user={user} className="w-12 h-12 border-2 border-phim-accent" />
                                 <div>
                                     <p className="text-white font-bold text-lg">{user.fullname || user.username}</p>
                                     <p className="text-xs text-gray-400">{user.email}</p>
                                 </div>
-                            </div>
+                            </Link>
                         ) : (
                             <Logo />
                         )}
@@ -292,17 +325,24 @@ const Header = () => {
                     
                     {user && (
                         <div className="grid grid-cols-3 gap-2 mt-4">
-                            <button onClick={() => { navigate('/tu-phim'); setMobileMenuOpen(false); }} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"><FaHeart className="text-red-500" /> <span className="text-[10px] text-gray-300">Yêu thích</span></button>
-                            <button onClick={() => { navigate('/lich-su'); setMobileMenuOpen(false); }} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"><FaHistory className="text-blue-400" /> <span className="text-[10px] text-gray-300">Lịch sử</span></button>
-                            <button onClick={() => { navigate('/ho-so'); setMobileMenuOpen(false); }} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"><FaCog className="text-gray-400" /> <span className="text-[10px] text-gray-300">Cài đặt</span></button>
+                            <Link to="/tu-phim" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"><FaHeart className="text-red-500" /> <span className="text-[10px] text-gray-300">Yêu thích</span></Link>
+                            <Link to="/lich-su" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"><FaHistory className="text-blue-400" /> <span className="text-[10px] text-gray-300">Lịch sử</span></Link>
+                            <Link to="/ho-so" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"><FaCog className="text-gray-400" /> <span className="text-[10px] text-gray-300">Cài đặt</span></Link>
                         </div>
                     )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-                    <a href="/" className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-white/5 text-white font-medium transition">
+                    {/* MOBILE DASHBOARD LINK */}
+                    {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                        <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="w-full flex items-center gap-3 py-3 px-4 rounded-lg bg-yellow-900/20 text-yellow-500 font-bold mb-2 border border-yellow-900/50">
+                            <span className="w-6 text-center"><FaChartBar/></span> Dashboard Quản Trị
+                        </Link>
+                    )}
+
+                    <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-white/5 text-white font-medium transition">
                         <span className="w-6 text-center"><FaFilm className="text-phim-accent"/></span> Trang Chủ
-                    </a>
+                    </Link>
 
                     <div>
                         <button onClick={() => toggleMobileSubmenu('danh-sach')} className="w-full flex justify-between items-center py-3 px-4 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition font-medium">
@@ -312,7 +352,7 @@ const Header = () => {
                         <div className={`pl-11 pr-2 overflow-hidden transition-all duration-300 ${activeMobileSubmenu === 'danh-sach' ? 'max-h-[500px] opacity-100 pb-2' : 'max-h-0 opacity-0'}`}>
                             <div className="grid grid-cols-1 gap-1 border-l border-white/10 pl-3">
                                 {listItems.map((item) => (
-                                    <a key={item.slug} href={`/danh-sach/${item.slug}`} className="text-sm text-gray-500 py-2 hover:text-white block">{item.name}</a>
+                                    <Link key={item.slug} to={`/danh-sach/${item.slug}`} onClick={() => setMobileMenuOpen(false)} className="text-sm text-gray-500 py-2 hover:text-white block">{item.name}</Link>
                                 ))}
                             </div>
                         </div>
@@ -326,7 +366,7 @@ const Header = () => {
                         <div className={`pl-11 pr-2 overflow-hidden transition-all duration-300 ${activeMobileSubmenu === 'the-loai' ? 'max-h-[500px] opacity-100 pb-2' : 'max-h-0 opacity-0'}`}>
                             <div className="grid grid-cols-2 gap-2 border-l border-white/10 pl-3 pt-2">
                                 {menuData.theLoai.map((item) => (
-                                    <a key={item._id} href={`/the-loai/${item.slug}`} className="text-sm text-gray-500 py-1 hover:text-white truncate">{item.name}</a>
+                                    <Link key={item._id} to={`/the-loai/${item.slug}`} onClick={() => setMobileMenuOpen(false)} className="text-sm text-gray-500 py-1 hover:text-white truncate">{item.name}</Link>
                                 ))}
                             </div>
                         </div>
@@ -340,7 +380,7 @@ const Header = () => {
                         <div className={`pl-11 pr-2 overflow-hidden transition-all duration-300 ${activeMobileSubmenu === 'quoc-gia' ? 'max-h-[500px] opacity-100 pb-2' : 'max-h-0 opacity-0'}`}>
                             <div className="grid grid-cols-2 gap-2 border-l border-white/10 pl-3 pt-2">
                                 {menuData.quocGia.map((item) => (
-                                    <a key={item._id} href={`/quoc-gia/${item.slug}`} className="text-sm text-gray-400 py-1 hover:text-white block truncate">{item.name}</a>
+                                    <Link key={item._id} to={`/quoc-gia/${item.slug}`} onClick={() => setMobileMenuOpen(false)} className="text-sm text-gray-400 py-1 hover:text-white block truncate">{item.name}</Link>
                                 ))}
                             </div>
                         </div>
@@ -354,8 +394,8 @@ const Header = () => {
                         </button>
                     ) : (
                         <div className="grid grid-cols-2 gap-3">
-                            <button onClick={() => navigate('/login')} className="bg-phim-accent text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 transition">Đăng Nhập</button>
-                            <button onClick={() => navigate('/register')} className="border border-white/20 text-white font-bold py-3 rounded-xl hover:bg-white/10 transition">Đăng Ký</button>
+                            <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="bg-phim-accent text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 transition flex items-center justify-center">Đăng Nhập</Link>
+                            <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="border border-white/20 text-white font-bold py-3 rounded-xl hover:bg-white/10 transition flex items-center justify-center">Đăng Ký</Link>
                         </div>
                     )}
                 </div>

@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { register } from '../services/authService';
-// 1. Bỏ FaPlayCircle, thêm FaTimes cho Toast
+import { register, getCurrentUser } from '../services/authService'; // Thêm getCurrentUser
 import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaIdCard, FaCheckCircle, FaExclamationCircle, FaTimes } from 'react-icons/fa';
-// 2. Import ảnh Logo của bạn
 import LogoImg from '../assets/logo.png';
 
 // --- TOAST COMPONENT (GIỮ NGUYÊN) ---
@@ -55,6 +53,15 @@ const Register = () => {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // --- LOGIC MỚI: Redirect nếu đã đăng nhập ---
+  useEffect(() => {
+      const user = getCurrentUser();
+      if (user) {
+          navigate('/'); // Đá về trang chủ nếu đã có session
+      }
+  }, [navigate]);
+  // -------------------------------------------
+
   const handleSubmit = async (e) => {
       e.preventDefault();
       setToast(null);
@@ -92,9 +99,8 @@ const Register = () => {
                 <FaArrowLeft />
             </button>
 
-             {/* --- PHẦN LOGO MỚI --- */}
+             {/* --- PHẦN LOGO --- */}
              <div className="text-center mb-8 flex justify-center">
-                 {/* Sử dụng ảnh Logo thay vì text */}
                  <img 
                     src={LogoImg} 
                     alt="PhimVietHay Logo" 
@@ -106,7 +112,6 @@ const Register = () => {
             <h2 className="text-2xl font-bold text-white mb-6 text-center tracking-wide">Đăng Ký Thành Viên</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Các input giữ nguyên như cũ */}
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaIdCard /></div>
                     <input type="text" placeholder="Tên hiển thị (VD: Nguyễn Văn A)" required className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.fullname} onChange={(e) => setFormData({...formData, fullname: e.target.value})}/>
@@ -118,17 +123,17 @@ const Register = () => {
                 </div>
 
                 <div className="relative group">
-                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaEnvelope /></div>
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaEnvelope /></div>
                     <input type="email" placeholder="Địa chỉ Email" required className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})}/>
                 </div>
                 
                 <div className="relative group">
-                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaLock /></div>
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaLock /></div>
                     <input type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" required minLength={6} className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})}/>
                 </div>
 
                 <div className="relative group">
-                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaCheckCircle /></div>
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaCheckCircle /></div>
                     <input type="password" placeholder="Nhập lại mật khẩu" required className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}/>
                 </div>
 

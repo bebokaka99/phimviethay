@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { getCurrentUser, logout } from '../../services/authService';
-// Thêm FaMagic vào dòng import icon
 import { FaChartBar, FaUsers, FaComments, FaSignOutAlt, FaHome, FaMagic } from 'react-icons/fa';
 import Logo from '../common/Logo';
 
@@ -12,20 +11,21 @@ const AdminLayout = () => {
 
   // Bảo vệ trang Admin
   useEffect(() => {
-      if (!user || user.role !== 'admin') {
+      // --- LOGIC MỚI: Cho phép cả admin và super_admin ---
+      if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
           alert('Bạn không có quyền truy cập trang này!');
           navigate('/');
       }
   }, [user, navigate]);
 
-  if (!user || user.role !== 'admin') return null;
+  // Check lại lần nữa khi render để tránh flash content
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) return null;
 
-  // CẬP NHẬT MENU: Thêm mục Intro & Ending
   const menuItems = [
       { name: 'Thống kê', path: '/admin', icon: <FaChartBar /> },
       { name: 'Người dùng', path: '/admin/users', icon: <FaUsers /> },
       { name: 'Bình luận', path: '/admin/comments', icon: <FaComments /> },
-      { name: 'Intro & Ending', path: '/admin/intros', icon: <FaMagic /> }, // <--- MỚI
+      { name: 'Intro & Ending', path: '/admin/intros', icon: <FaMagic /> }, 
   ];
 
   return (

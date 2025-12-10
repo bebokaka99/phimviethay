@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import Header from '../components/layout/Header'; // Giữ nếu bạn dùng Layout riêng
 import HeroSection from '../components/movies/HeroSection';
-import MovieRow from '../components/movies/MovieRow';
-import LazyMovieRow from '../components/movies/LazyMovieRow'; // Import component mới
+import LazyMovieRow from '../components/movies/LazyMovieRow';
 import { HomeSkeleton } from '../components/common/Skeleton';
-import { getHomeData, getTrendingMovies } from '../services/movieService';
+import { getHomeData } from '../services/movieService'; // Đã xóa getTrendingMovies
 
 const Home = () => {
   const [loadingBanner, setLoadingBanner] = useState(true);
   
-  // Dữ liệu ưu tiên (Load ngay lập tức)
+  // Dữ liệu ưu tiên (Chỉ còn Banner)
   const [bannerMovies, setBannerMovies] = useState([]);
-  const [trendingMovies, setTrendingMovies] = useState([]); 
 
-  // Cấu hình các danh mục phim (Sẽ load lazy)
+  // Cấu hình các danh mục phim
   const ROW_CONFIG = [
     { title: "Phim Lẻ Mới Cập Nhật", slug: "phim-le", type: "danh-sach" },
     { title: "Phim Bộ Hot", slug: "phim-bo", type: "danh-sach" },
@@ -26,21 +23,14 @@ const Home = () => {
     { title: "TV Shows", slug: "tv-shows", type: "danh-sach" },
   ];
 
-  // 1. Chỉ tải Banner & Trending (Priority High)
+  // 1. Chỉ tải Banner (Nhanh hơn rất nhiều)
   useEffect(() => {
     const fetchPriorityData = async () => {
         try {
-            // Chạy song song 2 request quan trọng nhất
-            const [bannerData, trendingData] = await Promise.all([
-                getHomeData(),
-                getTrendingMovies()
-            ]);
+            const bannerData = await getHomeData();
 
             if (bannerData?.data?.items) {
                 setBannerMovies(bannerData.data.items.slice(0, 8));
-            }
-            if (trendingData) {
-                setTrendingMovies(trendingData);
             }
         } catch (err) {
             console.error("Lỗi tải trang chủ:", err);
@@ -52,16 +42,6 @@ const Home = () => {
     fetchPriorityData();
   }, []);
 
-  // Title đặc biệt cho Trending
-  const TrendingTitle = (
-      <div className="flex items-center gap-3">
-          <span className="text-white">Top 10 Phim Xem Nhiều</span>
-          <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded animate-pulse shadow-lg shadow-red-600/50 tracking-wider border border-red-500">
-              HOT
-          </span>
-      </div>
-  );
-
   if (loadingBanner) return <HomeSkeleton />;
 
   return (
@@ -71,19 +51,13 @@ const Home = () => {
         <meta name="description" content="Xem phim online chất lượng cao miễn phí..." />
       </Helmet>
 
-      {/* Banner luôn load đầu tiên */}
+      {/* Banner */}
       <HeroSection movies={bannerMovies} />
       
+      {/* Danh sách phim (Bỏ Trending, đẩy các mục khác lên) */}
       <div className="relative z-10 px-0 space-y-2 md:space-y-4 pb-10 mt-8 md:mt-12 bg-gradient-to-b from-phim-dark/0 via-phim-dark to-phim-dark">
             
-            {/* Trending cũng load ngay (Eager Loading) vì nó ở ngay dưới banner */}
-            {trendingMovies.length > 0 && (
-                <div className="mb-4">
-                    <MovieRow title={TrendingTitle} movies={trendingMovies} />
-                </div>
-            )}
-
-            {/* Các danh mục còn lại sẽ load theo kiểu Lazy (Cuộn tới đâu load tới đó) */}
+            {/* Các danh mục phim Load Lazy */}
             {ROW_CONFIG.map((row, index) => (
                 <LazyMovieRow 
                     key={index} 

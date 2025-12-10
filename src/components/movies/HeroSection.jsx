@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // <--- IMPORT LINK
 import { FaPlay, FaInfoCircle, FaStar } from 'react-icons/fa';
 import { IMG_URL, getMovieDetail } from '../../services/movieService';
 
 const HeroSection = ({ movies }) => {
-    const navigate = useNavigate();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [heroMovies, setHeroMovies] = useState([]);
 
@@ -70,10 +69,6 @@ const HeroSection = ({ movies }) => {
     const ratingValue = movie.tmdb?.vote_average || movie.vote_average || 0;
     const displayRating = ratingValue > 0 ? ratingValue.toFixed(1) : 'N/A';
 
-    const handleNavigate = () => {
-        navigate(`/phim/${movie.slug}`);
-    };
-
     return (
         <div className="relative h-[500px] md:h-[700px] w-full text-white overflow-hidden group">
             
@@ -95,13 +90,17 @@ const HeroSection = ({ movies }) => {
                     
                     {/* Cột trái: Thông tin phim */}
                     <div key={movie._id + '-text'} className="w-full md:w-[60%] space-y-6 z-10 animate-fade-up-custom">
-                        <h1
-                            onClick={handleNavigate}
-                            className="text-3xl md:text-5xl font-black leading-snug drop-shadow-2xl text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 py-2 cursor-pointer hover:opacity-80 transition line-clamp-2"
+                        
+                        {/* 1. TITLE THÀNH LINK */}
+                        <Link 
+                            to={`/phim/${movie.slug}`}
+                            className="block hover:opacity-80 transition"
                             title={movie.name}
                         >
-                            {movie.name}
-                        </h1>
+                            <h1 className="text-3xl md:text-5xl font-black leading-snug drop-shadow-2xl text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 py-2 line-clamp-2">
+                                {movie.name}
+                            </h1>
+                        </Link>
 
                         <div className="flex flex-wrap items-center gap-3 text-sm md:text-base font-medium text-gray-200">
                             <span className="flex items-center gap-1 text-yellow-400 font-bold text-lg">
@@ -123,29 +122,33 @@ const HeroSection = ({ movies }) => {
                         </p>
 
                         <div className="flex gap-4 pt-2">
-                            <button 
-                                onClick={handleNavigate} 
+                            {/* 2. NÚT XEM NGAY THÀNH LINK */}
+                            <Link 
+                                to={`/xem-phim/${movie.slug}`} 
                                 className="bg-red-600 text-white px-8 py-3 md:px-10 md:py-4 rounded-full hover:bg-red-700 transition font-bold flex items-center gap-3 shadow-xl shadow-red-900/40 transform hover:scale-105 text-base md:text-lg"
                             >
                                 <FaPlay /> XEM NGAY
-                            </button>
-                            <button 
-                                onClick={handleNavigate} 
+                            </Link>
+                            
+                            {/* 3. NÚT CHI TIẾT THÀNH LINK */}
+                            <Link 
+                                to={`/phim/${movie.slug}`} 
                                 className="bg-white/10 text-white px-8 py-3 md:px-10 md:py-4 rounded-full hover:bg-white/20 transition backdrop-blur-md font-bold flex items-center gap-3 border border-white/20 text-base md:text-lg"
                             >
                                 <FaInfoCircle /> CHI TIẾT
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
                     {/* Cột phải: Poster (Chỉ hiện trên desktop) */}
                     <div key={movie._id + '-poster'} className="hidden md:flex w-full md:w-[40%] justify-end relative z-10 animate-poster-custom pr-8">
-                        <div 
-                            onClick={handleNavigate} 
-                            className="w-[280px] aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/10 transform rotate-3 hover:rotate-0 transition duration-700 ease-out group-hover:scale-105 cursor-pointer"
+                        {/* 4. POSTER THÀNH LINK */}
+                        <Link 
+                            to={`/phim/${movie.slug}`}
+                            className="block w-[280px] aspect-[2/3] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/10 transform rotate-3 hover:rotate-0 transition duration-700 ease-out group-hover:scale-105"
                         >
                             <img src={posterImg} alt={movie.name} className="w-full h-full object-cover" />
-                        </div>
+                        </Link>
                     </div>
                 </div>
             </div>
