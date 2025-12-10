@@ -31,6 +31,10 @@ const MovieCard = memo(({ movie }) => {
 
     // --- MOUSE EVENTS ---
     const handleMouseEnter = () => {
+        // [QUAN TRỌNG] Tắt tính năng này trên Mobile/Tablet (Màn hình < 1024px)
+        // Để trải nghiệm chạm (touch) được mượt mà, vào phim ngay lập tức
+        if (window.innerWidth < 1024) return;
+
         if (exitTimer.current) clearTimeout(exitTimer.current);
         
         if (!isHovered) {
@@ -95,17 +99,17 @@ const MovieCard = memo(({ movie }) => {
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
             >
-                {/* ẢNH NỀN */}
+                {/* 1. ẢNH NỀN */}
                 <img 
                     src={backdropUrl} 
                     alt={movie.name} 
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-[4s] group-hover:scale-110"
                 />
 
-                {/* GRADIENT */}
+                {/* 2. GRADIENT */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/80 to-transparent" />
 
-                {/* CONTENT */}
+                {/* 3. CONTENT */}
                 <div className="absolute inset-0 p-4 flex flex-col justify-end items-start gap-2">
                     
                     <Link to={`/phim/${movie.slug}`} className="block hover:opacity-80 transition w-full">
@@ -117,7 +121,6 @@ const MovieCard = memo(({ movie }) => {
 
                     {/* Metadata */}
                     <div className="flex items-center flex-wrap gap-2 text-[10px] font-bold text-gray-300 mt-1">
-                        {/* [ĐÃ ĐỔI] Màu vàng (text-yellow-400) cho nổi bật */}
                         <span className="flex items-center gap-1 text-yellow-400 text-xs font-extrabold shadow-black drop-shadow-md">
                             <FaStar /> {displayRating}
                         </span>
