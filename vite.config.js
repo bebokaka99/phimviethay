@@ -7,27 +7,27 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate', // Tự động cập nhật khi có code mới
-      includeAssets: ['favicon.svg', 'robots.txt'], // Các file tĩnh cần cache
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'robots.txt'],
       manifest: {
         name: 'PhimVietHay - Xem Phim HD',
         short_name: 'PhimVietHay',
         description: 'Xem phim online miễn phí chất lượng cao',
-        theme_color: '#0a0e17', // Màu thanh trạng thái trùng với nền web
+        theme_color: '#0a0e17',
         background_color: '#0a0e17',
-        display: 'standalone', // Chế độ toàn màn hình (mất thanh URL)
+        display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
         icons: [
           {
-            src: '/pwa-192x192.png', // Icon nhỏ cho điện thoại
+            src: '/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: '/pwa-512x512.png', // Icon lớn (Splash screen)
+            src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
@@ -36,10 +36,24 @@ export default defineConfig({
       }
     })
   ],
-  // --- THÊM PHẦN NÀY ---
+  // --- CẤU HÌNH PROXY (QUAN TRỌNG) ---
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000', // Trỏ về Backend Node.js
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   build: {
-    // Tắt source map ở môi trường production (deploy)
-    // Giúp code build ra nhẹ hơn và hacker không thể xem code gốc (file .jsx) trong DevTools
+    // 1. Tắt source map để hacker không xem được code gốc
     sourcemap: false, 
+    
+    // 2. Tự động xóa console.log và debugger khi build
+    minify: 'esbuild',
+    esbuild: {
+      drop: ['console', 'debugger'], 
+    },
   }
 })

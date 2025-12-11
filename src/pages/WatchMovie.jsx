@@ -6,13 +6,13 @@ import {
     FaArrowLeft, FaExpand, FaClock, FaGlobe, FaUsers, FaHeart
 } from 'react-icons/fa';
 
-import Header from '../components/layout/Header';
 import MovieRow from '../components/movies/MovieRow';
 import CommentSection from '../components/comments/CommentSection';
 // Import VideoPlayer mới
 import VideoPlayer from '../components/movies/VideoPlayer';
 
-import { getMovieDetail, getMoviesBySlug, getMoviePeoples, IMG_URL, increaseView } from '../services/movieService';
+// [CLEAN UP] Đã xóa 'increaseView' khỏi import vì backend tự xử lý
+import { getMovieDetail, getMoviesBySlug, getMoviePeoples, IMG_URL } from '../services/movieService';
 import { setWatchHistory, checkFavoriteStatus, toggleFavorite } from '../services/authService';
 
 // --- SUB-COMPONENT: TOAST NOTIFICATION ---
@@ -37,7 +37,6 @@ const WatchMovie = () => {
     const navigate = useNavigate();
 
     const currentEpSlug = searchParams.get('tap');
-    const viewCountedRef = useRef(false);
     const playerRef = useRef(null);
 
     // Data States
@@ -82,7 +81,9 @@ const WatchMovie = () => {
         const fetchData = async () => {
             if (!movie) setLoading(true);
             try {
+                // Gọi API Backend: Lấy chi tiết + Tự động tăng view + Tự động lưu DB
                 const data = await getMovieDetail(slug);
+                
                 if (data?.status && data?.movie) {
                     setMovie(data.movie);
                     setEpisodes(data.episodes || []);
@@ -101,20 +102,7 @@ const WatchMovie = () => {
                         setCurrentEpisode(foundEp);
                     }
 
-                    // --- LOGIC TĂNG VIEW ---
-                    if (!viewCountedRef.current) {
-                        const ratingToSave = data.movie.tmdb?.vote_average || data.movie.vote_average || 0;
-                        increaseView({
-                            slug: data.movie.slug,
-                            name: data.movie.name,
-                            thumb: data.movie.thumb_url,
-                            quality: data.movie.quality,
-                            year: data.movie.year,
-                            episode_current: data.movie.episode_current,
-                            vote_average: ratingToSave
-                        });
-                        viewCountedRef.current = true;
-                    }
+                    // [CLEAN UP] Đã xóa logic gọi increaseView thủ công ở đây
 
                     // Lấy thông tin bổ sung
                     getMoviePeoples(slug).then(res => setCasts(res || []));
@@ -239,7 +227,6 @@ const WatchMovie = () => {
     const voteCount = movie.tmdb?.vote_count || 0;
 
     // Lấy dữ liệu server để render list tập bên phải (Sidebar)
-    // Fix lỗi undefined khi switch server
     const displayEpisodes = episodes[currentServer] ? episodes[currentServer] : episodes[0];
 
     return (
@@ -272,7 +259,7 @@ const WatchMovie = () => {
                         <div className="relative w-full aspect-video bg-black md:rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 group z-20">
                             {currentEpisode ? (
                                 <VideoPlayer
-                                    key={currentEpisode.slug} // Reset player khi đổi tập
+                                    key={currentEpisode.slug} 
 
                                     // === QUAN TRỌNG: TRUYỀN TÊN PHIM ===
                                     movieSlug={movie.slug}
@@ -286,7 +273,6 @@ const WatchMovie = () => {
                                     onEpChange={(ep) => handleChangeEpisode(ep)}
                                     onServerChange={(index) => setCurrentServer(index)}
 
-                                    // Truyền boolean rõ ràng
                                     hasNextEp={!!nextEp}
                                     onNextEp={() => {
                                         if (nextEp) handleChangeEpisode(nextEp);
@@ -383,11 +369,9 @@ const WatchMovie = () => {
 
                                 <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
                                     <div className="grid grid-cols-4 lg:grid-cols-4 gap-2">
-                                        {/* SỬA LỖI DUPLICATE KEY Ở ĐÂY */}
                                         {displayEpisodes?.server_data?.map((ep, idx) => {
                                             const isActive = currentEpisode?.slug === ep.slug;
                                             const isWatched = watchedEpisodes.includes(ep.slug);
-                                            // Sử dụng composite key để tránh trùng
                                             const uniqueKey = `${ep.slug}-${idx}`;
 
                                             return (
