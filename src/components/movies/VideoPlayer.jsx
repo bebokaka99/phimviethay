@@ -24,7 +24,8 @@ const STYLES = `
     .animate-in { animation: slideInRight 0.5s ease-out forwards; }
 `;
 
-const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, onEpChange, onServerChange, currentServerIndex, onNextEp, hasNextEp, ...rest }) => {
+// [UPDATE] Thêm onArtReady vào props để hỗ trợ Watch Party
+const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, onEpChange, onServerChange, currentServerIndex, onNextEp, hasNextEp, onArtReady, ...rest }) => {
     const artRef = useRef(null);
     const playerRef = useRef(null);
     const switchTimeRef = useRef(0);
@@ -210,6 +211,13 @@ const VideoPlayer = ({ movieSlug, option, style, episodes, servers, currentEp, o
                 },
             },
         });
+
+        // ----------------------------------------------------------------
+        // [QUAN TRỌNG] GỬI INSTANCE RA NGOÀI ĐỂ WATCH PARTY ĐIỀU KHIỂN
+        if (onArtReady) {
+            onArtReady(art);
+        }
+        // ----------------------------------------------------------------
 
         // Controls
         art.controls.add({ name: 'rewind-10', position: 'left', index: 10, html: renderToStaticMarkup(<MdReplay10 size={22} />), click: () => art.currentTime -= 10 });

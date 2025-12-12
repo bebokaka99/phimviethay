@@ -11,8 +11,10 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Favorites from "./pages/Favorites";
-
 import History from "./pages/History";
+
+// [MỚI] Import trang Watch Party
+import WatchParty from "./pages/WatchParty";
 
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
@@ -27,6 +29,11 @@ export const router = createBrowserRouter([
       { path: "/", element: <Home /> },
       { path: "/phim/:slug", element: <MovieDetail /> },
       { path: "/xem-phim/:slug", element: <WatchMovie /> },
+      
+      // [MỚI] Route Xem chung (Watch Party)
+      // :roomId? nghĩa là tham số này có thể có hoặc không
+      { path: "/watch-party/:roomId?", element: <WatchParty /> },
+
       { path: "/tim-kiem", element: <SearchPage /> },
       { path: "/the-loai/:slug", element: <Catalog group="the-loai" /> },
       { path: "/quoc-gia/:slug", element: <Catalog group="quoc-gia" /> },
@@ -40,7 +47,7 @@ export const router = createBrowserRouter([
 
       // Auth & User
       { path: "/ho-so", element: <Profile /> },
-      { path: "/tu-phim", element: <Favorites /> }, // Nhớ import Favorites
+      { path: "/tu-phim", element: <Favorites /> },
       {
         path: "/lich-su",
         element: <History />,
@@ -53,14 +60,13 @@ export const router = createBrowserRouter([
     element: <AdminLayout />,
     children: [
       { index: true, element: <Dashboard /> },
-      // --- ROUTE MỚI ---
       { path: "users", element: <Users /> },   
       { path: "comments", element: <Comments /> }, 
       { path: "intros", element: <Intros /> },
     ]
   },
 
-  // Login/Register thường đứng riêng, không cần Header/Footer (hoặc tùy bạn)
+  // Login/Register thường đứng riêng, không cần Header/Footer
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
 ]);
