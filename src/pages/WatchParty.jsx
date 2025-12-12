@@ -28,38 +28,36 @@ const WatchParty = () => {
     const { roomId } = useParams();
     const navigate = useNavigate();
     
-    // User Info
     const [currentUser] = useState(() => {
         const user = getCurrentUser();
         return user ? { name: user.name, avatar: user.avatar } : { name: `Khách ${Math.floor(Math.random() * 1000)}`, avatar: null };
     });
 
-    // Chat State
     const [messages, setMessages] = useState([]);
     const [inputMsg, setInputMsg] = useState('');
     
-    // Movie State
     const [movie, setMovie] = useState(null);
     const [episodes, setEpisodes] = useState([]);
     const [currentEpisode, setCurrentEpisode] = useState(null);
     const [currentServer, setCurrentServer] = useState(0);
 
-    // [FIX] Dùng Ref để lưu State cho Socket đọc (Tránh Stale Closure)
+    // Refs để lưu state mới nhất cho Socket đọc (tránh stale closure)
     const currentMovieRef = useRef(null); 
     const currentEpisodeRef = useRef(null); 
+    
+    // [FIX] Ref lưu thời gian cần tua sau khi load phim xong
+    const pendingSeekTimeRef = useRef(null);
+    const pendingPlayStateRef = useRef(null); // Lưu trạng thái play/pause cần set
 
-    // Cập nhật Ref mỗi khi State thay đổi
     useEffect(() => { currentMovieRef.current = movie; }, [movie]);
     useEffect(() => { currentEpisodeRef.current = currentEpisode; }, [currentEpisode]);
 
-    // Search State
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
     const searchTimeoutRef = useRef(null);
 
-    // Player Ref
     const artInstanceRef = useRef(null);
     const isRemoteUpdate = useRef(false);
 
@@ -74,7 +72,7 @@ const WatchParty = () => {
     };
     useEffect(scrollToBottom, [messages]);
 
-    // 1. KẾT NỐI SOCKET (Chỉ chạy 1 lần khi mount)
+    // 1. KẾT NỐI SOCKET
     useEffect(() => {
         if (!roomId) {
             const randomId = Math.random().toString(36).substring(7);
@@ -85,10 +83,14 @@ const WatchParty = () => {
         socket.connect();
         socket.emit("join_room", roomId);
 
-        // --- LẮNG NGHE SỰ KIỆN VIDEO ---
+        // --- NHẬN LỆNH TỪ SERVER ---
         socket.on("receive_video_action", (data) => {
             const art = artInstanceRef.current;
-            isRemoteUpdate.current = true;
+            
+            // Đánh dấu lệnh từ xa để không gửi ngược lại
+            if (data.action !== 'request_sync') {
+                isRemoteUpdate.current = true;
+            }
 
             console.log(`[Socket] Receive: ${data.action}`, data);
 
@@ -96,34 +98,66 @@ const WatchParty = () => {
                 case 'play':
                     if (art) {
                         art.play();
+                        // Đồng bộ thời gian nếu lệch quá 2s
                         if (Math.abs(art.currentTime - data.time) > 2) art.currentTime = data.time;
                     }
                     break;
                 case 'pause':
-                    if (art) art.pause();
+                    if (art) {
+                        art.pause();
+                        art.currentTime = data.time; // Sync chính xác khi pause
+                    }
                     break;
                 case 'seek':
                     if (art) art.currentTime = data.time;
                     break;
+                
+                // [FIX] Xử lý khi chủ phòng đổi phim
                 case 'change_movie':
-                    // Kiểm tra Ref xem phim có khác không để load
                     if (data.slug !== currentMovieRef.current?.slug) {
                         loadMovieData(data.slug);
                     }
                     break;
+
+                // [FIX] Xử lý đồng bộ toàn bộ (Sync Full State)
+                case 'sync_current_state':
+                    // 1. Lưu thời gian cần tua vào Ref
+                    pendingSeekTimeRef.current = data.time;
+                    pendingPlayStateRef.current = data.isPlaying;
+
+                    // 2. Nếu phim khác phim hiện tại -> Load phim mới
+                    if (data.slug !== currentMovieRef.current?.slug) {
+                        console.log("[Sync] Phim khác, đang load lại...");
+                        loadMovieData(data.slug); 
+                        // Khi load xong, VideoPlayer sẽ mount lại và gọi onArtReady -> lúc đó sẽ check pendingSeekTimeRef
+                    } else {
+                        // 3. Nếu phim giống nhau -> Chỉ cần Seek và Set trạng thái
+                        console.log("[Sync] Phim giống nhau, đang tua...");
+                        if (art) {
+                            art.currentTime = data.time;
+                            if (data.isPlaying) art.play(); else art.pause();
+                            pendingSeekTimeRef.current = null; // Clear sau khi dùng
+                        }
+                    }
+                    break;
+
+                // Ai đó (Người mới) yêu cầu Sync -> Mình (Chủ phòng/Người cũ) gửi trạng thái
                 case 'request_sync':
-                    // Ai đó yêu cầu sync -> Mình gửi lại trạng thái hiện tại của mình
                     if (currentMovieRef.current && art) {
+                        console.log("[Host] Gửi trạng thái sync cho người mới...");
                         socket.emit("video_action", {
                             roomId,
-                            action: 'change_movie', // Gửi lại lệnh đổi phim để người kia load
+                            action: 'sync_current_state', // Dùng action này để gửi full info
                             slug: currentMovieRef.current.slug,
-                            time: art.currentTime
+                            time: art.currentTime,
+                            isPlaying: art.playing
                         });
                     }
                     break;
                 default: break;
             }
+            
+            // Mở khóa sau 500ms
             setTimeout(() => { isRemoteUpdate.current = false; }, 500);
         });
 
@@ -131,26 +165,24 @@ const WatchParty = () => {
             setMessages((prev) => [...prev, { ...data, isMe: false }]);
         });
 
-        // --- NGƯỜI MỚI VÀO -> TỰ ĐỘNG SYNC ---
         socket.on("user_joined", () => {
             setMessages((prev) => [...prev, { text: "👋 Một người bạn vừa vào phòng!", system: true }]);
-            
-            // [FIX] Dùng Ref để lấy giá trị mới nhất
+            // [TỰ ĐỘNG SYNC] Khi có người vào, gửi ngay trạng thái hiện tại
             if (currentMovieRef.current && artInstanceRef.current) {
-                console.log("[Host] Phát hiện người mới, đang gửi lệnh Sync phim...");
                 socket.emit("video_action", {
                     roomId,
-                    action: 'change_movie',
+                    action: 'sync_current_state',
                     slug: currentMovieRef.current.slug,
-                    time: artInstanceRef.current.currentTime
+                    time: artInstanceRef.current.currentTime,
+                    isPlaying: artInstanceRef.current.playing
                 });
             }
         });
 
-        // Yêu cầu Sync ngay khi vừa vào (để phòng trường hợp mình là người vào sau)
+        // [TỰ ĐỘNG SYNC] Khi mình vừa vào, hét lên yêu cầu sync ngay
         setTimeout(() => {
             socket.emit("video_action", { roomId, action: 'request_sync' });
-        }, 1000);
+        }, 1500); // Đợi 1.5s cho chắc
 
         return () => {
             socket.off("receive_video_action");
@@ -158,21 +190,17 @@ const WatchParty = () => {
             socket.off("user_joined");
             socket.disconnect();
         };
-    }, [roomId]); // [QUAN TRỌNG] Chỉ phụ thuộc roomId, không phụ thuộc movie để tránh reconnect
+    }, [roomId]); 
 
-    // --- SEARCH LOGIC ---
+    // --- SEARCH LOGIC (Giữ nguyên) ---
     useEffect(() => {
         if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
         if (!searchQuery.trim()) { setSearchResults([]); setShowDropdown(false); return; }
-
         searchTimeoutRef.current = setTimeout(async () => {
             setIsSearching(true);
             try {
                 const res = await searchMovies(searchQuery, 1);
-                if (res?.data?.items) {
-                    setSearchResults(res.data.items);
-                    setShowDropdown(true);
-                }
+                if (res?.data?.items) { setSearchResults(res.data.items); setShowDropdown(true); }
             } catch (error) { console.error(error); } finally { setIsSearching(false); }
         }, 500);
         return () => clearTimeout(searchTimeoutRef.current);
@@ -182,13 +210,7 @@ const WatchParty = () => {
         setSearchQuery('');
         setShowDropdown(false);
         loadMovieData(selectedMovie.slug);
-        
-        // Gửi lệnh đổi phim
-        socket.emit("video_action", { 
-            roomId, 
-            action: 'change_movie', 
-            slug: selectedMovie.slug 
-        });
+        socket.emit("video_action", { roomId, action: 'change_movie', slug: selectedMovie.slug });
     };
 
     const loadMovieData = async (slugToLoad) => {
@@ -204,21 +226,36 @@ const WatchParty = () => {
         } catch (error) { console.error(error); }
     };
 
-    // Nút thủ công để xin Sync
     const handleRequestSync = () => {
         socket.emit("video_action", { roomId, action: 'request_sync' });
-        alert("Đã gửi yêu cầu đồng bộ đến chủ phòng!");
+        // alert("Đã gửi yêu cầu đồng bộ!"); // Bỏ alert cho đỡ phiền
     };
 
-    // --- PLAYER EVENTS ---
+    // --- [FIX] PLAYER EVENTS & INITIAL SYNC ---
     const onArtReady = (art) => {
         artInstanceRef.current = art;
+
+        // [FIX QUAN TRỌNG] Kiểm tra xem có lệnh Seek đang chờ không (Do lệnh Sync tạo ra)
+        if (pendingSeekTimeRef.current !== null) {
+            console.log(`[Player] Thực hiện pending seek tới: ${pendingSeekTimeRef.current}`);
+            
+            // Delay nhẹ để đảm bảo video load metadata xong
+            setTimeout(() => {
+                art.currentTime = pendingSeekTimeRef.current;
+                if (pendingPlayStateRef.current) art.play(); else art.pause();
+                
+                // Reset pending
+                pendingSeekTimeRef.current = null;
+                pendingPlayStateRef.current = null;
+            }, 800);
+        }
+
+        // Gửi sự kiện khi mình thao tác
         art.on('play', () => { if (!isRemoteUpdate.current) socket.emit("video_action", { roomId, action: 'play', time: art.currentTime }); });
         art.on('pause', () => { if (!isRemoteUpdate.current) socket.emit("video_action", { roomId, action: 'pause', time: art.currentTime }); });
         art.on('seek', (time) => { if (!isRemoteUpdate.current) socket.emit("video_action", { roomId, action: 'seek', time: time }); });
     };
 
-    // --- CHAT SEND ---
     const handleSend = (e) => {
         e.preventDefault();
         if (!inputMsg.trim()) return;
@@ -308,7 +345,7 @@ const WatchParty = () => {
                             <h2 className="text-3xl font-bold text-white mb-2">Rạp đang chờ phim</h2>
                             <p className="text-gray-400 mb-4">Chủ phòng hãy chọn phim để bắt đầu.</p>
                             
-                            {/* [FIX] Nút thủ công nếu không tự sync được */}
+                            {/* Nút thủ công nếu không tự sync được */}
                             <button 
                                 onClick={handleRequestSync}
                                 className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm text-gray-300 transition-all border border-white/10"
