@@ -1,37 +1,22 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FaPaperPlane, FaUserFriends, FaCopy, FaPlay, FaSearch, FaTimes, FaHome, FaAngleRight } from 'react-icons/fa';
+import { FaPaperPlane, FaUserFriends, FaCopy, FaPlay, FaSearch, FaTimes, FaHome, FaAngleRight, FaSync } from 'react-icons/fa';
 import socket from '../services/socket';
 import VideoPlayer from '../components/movies/VideoPlayer';
 import { getMovieDetail, searchMovies, IMG_URL } from '../services/movieService';
 import { getCurrentUser } from '../services/authService';
 
-// --- SUB-COMPONENT: Chat Message (Có Avatar) ---
+// --- SUB-COMPONENT: Chat Message ---
 const ChatMessage = ({ msg, isMe }) => {
-    // Tạo Avatar mặc định theo tên nếu không có ảnh
     const avatarUrl = msg.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.user?.name || 'K')}&background=random&color=fff&size=128`;
-
     return (
         <div className={`flex items-end gap-2 mb-4 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-            {/* AVATAR */}
             <div className="flex-shrink-0">
-                <img 
-                    src={avatarUrl} 
-                    alt="Avt" 
-                    className="w-8 h-8 rounded-full border border-white/20 shadow-sm object-cover"
-                />
+                <img src={avatarUrl} alt="Avt" className="w-8 h-8 rounded-full border border-white/20 shadow-sm object-cover"/>
             </div>
-
-            {/* BUBBLE */}
             <div className={`flex flex-col max-w-[75%] ${isMe ? 'items-end' : 'items-start'}`}>
-                {/* Tên người gửi (Chỉ hiện cho người lạ) */}
                 {!isMe && <span className="text-[10px] text-gray-400 ml-1 mb-0.5">{msg.user?.name || 'Khách'}</span>}
-                
-                <div className={`px-3 py-2 rounded-2xl text-sm shadow-md break-words ${
-                    isMe 
-                        ? 'bg-gradient-to-r from-red-600 to-red-700 text-white rounded-br-none' 
-                        : 'bg-white/10 text-gray-200 border border-white/5 rounded-bl-none'
-                }`}>
+                <div className={`px-3 py-2 rounded-2xl text-sm shadow-md break-words ${isMe ? 'bg-gradient-to-r from-red-600 to-red-700 text-white rounded-br-none' : 'bg-white/10 text-gray-200 border border-white/5 rounded-bl-none'}`}>
                     {msg.text}
                 </div>
             </div>
@@ -43,7 +28,7 @@ const WatchParty = () => {
     const { roomId } = useParams();
     const navigate = useNavigate();
     
-    // User Info (Tự tạo nếu là khách)
+    // User Info
     const [currentUser] = useState(() => {
         const user = getCurrentUser();
         return user ? { name: user.name, avatar: user.avatar } : { name: `Khách ${Math.floor(Math.random() * 1000)}`, avatar: null };
@@ -59,6 +44,14 @@ const WatchParty = () => {
     const [currentEpisode, setCurrentEpisode] = useState(null);
     const [currentServer, setCurrentServer] = useState(0);
 
+    // [FIX] Dùng Ref để lưu State cho Socket đọc (Tránh Stale Closure)
+    const currentMovieRef = useRef(null); 
+    const currentEpisodeRef = useRef(null); 
+
+    // Cập nhật Ref mỗi khi State thay đổi
+    useEffect(() => { currentMovieRef.current = movie; }, [movie]);
+    useEffect(() => { currentEpisodeRef.current = currentEpisode; }, [currentEpisode]);
+
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
@@ -70,29 +63,18 @@ const WatchParty = () => {
     const artInstanceRef = useRef(null);
     const isRemoteUpdate = useRef(false);
 
-    // [FIX SCROLL] Ref cho khung chứa tin nhắn thay vì thẻ div cuối cùng
     const messagesContainerRef = useRef(null);
-
-    // [FIX SCROLL] Hàm cuộn êm ái chỉ trong khung chat
     const scrollToBottom = () => {
         if (messagesContainerRef.current) {
             const { scrollHeight, clientHeight } = messagesContainerRef.current;
-            // Chỉ cuộn nếu nội dung dài hơn khung nhìn
             if (scrollHeight > clientHeight) {
-                messagesContainerRef.current.scrollTo({
-                    top: scrollHeight,
-                    behavior: 'smooth'
-                });
+                messagesContainerRef.current.scrollTo({ top: scrollHeight, behavior: 'smooth' });
             }
         }
     };
+    useEffect(scrollToBottom, [messages]);
 
-    // Gọi scroll khi có tin nhắn mới
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    // 1. KẾT NỐI SOCKET
+    // 1. KẾT NỐI SOCKET (Chỉ chạy 1 lần khi mount)
     useEffect(() => {
         if (!roomId) {
             const randomId = Math.random().toString(36).substring(7);
@@ -103,24 +85,42 @@ const WatchParty = () => {
         socket.connect();
         socket.emit("join_room", roomId);
 
+        // --- LẮNG NGHE SỰ KIỆN VIDEO ---
         socket.on("receive_video_action", (data) => {
             const art = artInstanceRef.current;
-            if (!art) return;
             isRemoteUpdate.current = true;
+
+            console.log(`[Socket] Receive: ${data.action}`, data);
 
             switch (data.action) {
                 case 'play':
-                    art.play();
-                    if (Math.abs(art.currentTime - data.time) > 2) art.currentTime = data.time;
+                    if (art) {
+                        art.play();
+                        if (Math.abs(art.currentTime - data.time) > 2) art.currentTime = data.time;
+                    }
                     break;
                 case 'pause':
-                    art.pause();
+                    if (art) art.pause();
                     break;
                 case 'seek':
-                    art.currentTime = data.time;
+                    if (art) art.currentTime = data.time;
                     break;
                 case 'change_movie':
-                    if (data.slug !== movie?.slug) loadMovieData(data.slug);
+                    // Kiểm tra Ref xem phim có khác không để load
+                    if (data.slug !== currentMovieRef.current?.slug) {
+                        loadMovieData(data.slug);
+                    }
+                    break;
+                case 'request_sync':
+                    // Ai đó yêu cầu sync -> Mình gửi lại trạng thái hiện tại của mình
+                    if (currentMovieRef.current && art) {
+                        socket.emit("video_action", {
+                            roomId,
+                            action: 'change_movie', // Gửi lại lệnh đổi phim để người kia load
+                            slug: currentMovieRef.current.slug,
+                            time: art.currentTime
+                        });
+                    }
                     break;
                 default: break;
             }
@@ -131,14 +131,26 @@ const WatchParty = () => {
             setMessages((prev) => [...prev, { ...data, isMe: false }]);
         });
 
+        // --- NGƯỜI MỚI VÀO -> TỰ ĐỘNG SYNC ---
         socket.on("user_joined", () => {
             setMessages((prev) => [...prev, { text: "👋 Một người bạn vừa vào phòng!", system: true }]);
-            if (movie && artInstanceRef.current) {
+            
+            // [FIX] Dùng Ref để lấy giá trị mới nhất
+            if (currentMovieRef.current && artInstanceRef.current) {
+                console.log("[Host] Phát hiện người mới, đang gửi lệnh Sync phim...");
                 socket.emit("video_action", {
-                    roomId, action: 'change_movie', slug: movie.slug, time: artInstanceRef.current.currentTime
+                    roomId,
+                    action: 'change_movie',
+                    slug: currentMovieRef.current.slug,
+                    time: artInstanceRef.current.currentTime
                 });
             }
         });
+
+        // Yêu cầu Sync ngay khi vừa vào (để phòng trường hợp mình là người vào sau)
+        setTimeout(() => {
+            socket.emit("video_action", { roomId, action: 'request_sync' });
+        }, 1000);
 
         return () => {
             socket.off("receive_video_action");
@@ -146,7 +158,7 @@ const WatchParty = () => {
             socket.off("user_joined");
             socket.disconnect();
         };
-    }, [roomId, movie]);
+    }, [roomId]); // [QUAN TRỌNG] Chỉ phụ thuộc roomId, không phụ thuộc movie để tránh reconnect
 
     // --- SEARCH LOGIC ---
     useEffect(() => {
@@ -170,7 +182,13 @@ const WatchParty = () => {
         setSearchQuery('');
         setShowDropdown(false);
         loadMovieData(selectedMovie.slug);
-        socket.emit("video_action", { roomId, action: 'change_movie', slug: selectedMovie.slug });
+        
+        // Gửi lệnh đổi phim
+        socket.emit("video_action", { 
+            roomId, 
+            action: 'change_movie', 
+            slug: selectedMovie.slug 
+        });
     };
 
     const loadMovieData = async (slugToLoad) => {
@@ -186,6 +204,12 @@ const WatchParty = () => {
         } catch (error) { console.error(error); }
     };
 
+    // Nút thủ công để xin Sync
+    const handleRequestSync = () => {
+        socket.emit("video_action", { roomId, action: 'request_sync' });
+        alert("Đã gửi yêu cầu đồng bộ đến chủ phòng!");
+    };
+
     // --- PLAYER EVENTS ---
     const onArtReady = (art) => {
         artInstanceRef.current = art;
@@ -198,10 +222,7 @@ const WatchParty = () => {
     const handleSend = (e) => {
         e.preventDefault();
         if (!inputMsg.trim()) return;
-        
-        // Gửi cả thông tin user kèm tin nhắn
         const msgData = { roomId, text: inputMsg, user: currentUser };
-        
         socket.emit("send_message", msgData);
         setMessages((prev) => [...prev, { text: inputMsg, user: currentUser, isMe: true }]);
         setInputMsg('');
@@ -215,7 +236,7 @@ const WatchParty = () => {
     return (
         <div className="w-full min-h-screen pt-24 pb-8 px-4 font-sans">
             
-            {/* HEADER & SEARCH TOOLBAR */}
+            {/* HEADER */}
             <div className="max-w-[1400px] mx-auto mb-6 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-lg relative z-50">
                 <div className="flex items-center gap-3">
                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_12px_#22c55e]"></div>
@@ -229,35 +250,16 @@ const WatchParty = () => {
                 <div className="relative w-full md:w-[400px]">
                     <div className="flex items-center bg-black/40 border border-white/10 rounded-full px-4 py-2.5 focus-within:border-red-500/50 focus-within:bg-black/60 transition-all shadow-inner">
                         <FaSearch className="text-gray-400 mr-3" />
-                        <input 
-                            type="text" 
-                            placeholder="Tìm phim để chiếu (VD: Mai, Conan...)" 
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            className="bg-transparent border-none text-sm text-white focus:outline-none w-full placeholder-gray-500"
-                        />
+                        <input type="text" placeholder="Tìm phim (VD: Mai, Conan...)" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-transparent border-none text-sm text-white focus:outline-none w-full placeholder-gray-500" />
                         {isSearching && <div className="animate-spin h-3 w-3 border-2 border-red-500 rounded-full border-t-transparent"></div>}
-                        {searchQuery && !isSearching && (
-                            <FaTimes className="text-gray-500 cursor-pointer hover:text-red-500 transition-colors" onClick={() => {setSearchQuery(''); setShowDropdown(false);}} />
-                        )}
+                        {searchQuery && !isSearching && <FaTimes className="text-gray-500 cursor-pointer hover:text-red-500 transition-colors" onClick={() => {setSearchQuery(''); setShowDropdown(false);}} />}
                     </div>
-
-                    {/* Search Dropdown */}
                     {showDropdown && searchResults.length > 0 && (
                         <div className="absolute top-full left-0 right-0 mt-3 bg-[#151922] border border-white/10 rounded-xl shadow-2xl max-h-96 overflow-y-auto custom-scrollbar z-[100] animate-fade-in-down">
                             {searchResults.map((item) => (
-                                <div 
-                                    key={item._id}
-                                    onClick={() => handleSelectMovie(item)}
-                                    className="flex items-center gap-4 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-0 group"
-                                >
+                                <div key={item._id} onClick={() => handleSelectMovie(item)} className="flex items-center gap-4 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-0 group">
                                     <div className="w-10 h-14 bg-gray-800 rounded-md overflow-hidden flex-shrink-0 shadow-md group-hover:scale-105 transition-transform duration-300">
-                                        <img 
-                                            src={`${IMG_URL}${item.thumb_url}`} 
-                                            alt={item.name} 
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => e.target.src = 'https://via.placeholder.com/40x56?text=No+Img'}
-                                        />
+                                        <img src={`${IMG_URL}${item.thumb_url}`} alt={item.name} className="w-full h-full object-cover" onError={(e) => e.target.src = 'https://via.placeholder.com/40x56?text=No+Img'} />
                                     </div>
                                     <div className="min-w-0">
                                         <h4 className="text-sm font-bold text-gray-200 group-hover:text-red-500 transition-colors truncate">{item.name}</h4>
@@ -275,7 +277,6 @@ const WatchParty = () => {
             </div>
 
             <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)] min-h-[500px]">
-                
                 {/* CỘT TRÁI: PLAYER */}
                 <div className="lg:col-span-3 bg-black rounded-2xl overflow-hidden border border-white/10 relative group shadow-2xl flex items-center justify-center ring-1 ring-white/5">
                     {movie && currentEpisode ? (
@@ -300,12 +301,20 @@ const WatchParty = () => {
                             />
                         </div>
                     ) : (
-                        <div className="text-center p-8">
+                        <div className="text-center p-8 flex flex-col items-center">
                             <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10">
                                 <FaPlay className="text-white/20 text-4xl ml-2" />
                             </div>
                             <h2 className="text-3xl font-bold text-white mb-2">Rạp đang chờ phim</h2>
-                            <p className="text-gray-400">Chủ phòng hãy tìm và chọn phim để bắt đầu buổi chiếu.</p>
+                            <p className="text-gray-400 mb-4">Chủ phòng hãy chọn phim để bắt đầu.</p>
+                            
+                            {/* [FIX] Nút thủ công nếu không tự sync được */}
+                            <button 
+                                onClick={handleRequestSync}
+                                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm text-gray-300 transition-all border border-white/10"
+                            >
+                                <FaSync /> Đồng bộ ngay
+                            </button>
                         </div>
                     )}
                 </div>
@@ -320,17 +329,8 @@ const WatchParty = () => {
                         <span className="text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/20 rounded-full">Live</span>
                     </div>
 
-                    {/* [FIX SCROLL] GẮN REF CONTAINER */}
-                    <div 
-                        ref={messagesContainerRef} 
-                        className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-1 scroll-smooth"
-                    >
-                        {messages.length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-full text-gray-500 opacity-50">
-                                <FaUserFriends className="text-4xl mb-2" />
-                                <p className="text-xs">Chưa có tin nhắn nào</p>
-                            </div>
-                        )}
+                    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-1 scroll-smooth">
+                        {messages.length === 0 && <div className="flex flex-col items-center justify-center h-full text-gray-500 opacity-50"><FaUserFriends className="text-4xl mb-2" /><p className="text-xs">Chưa có tin nhắn nào</p></div>}
                         {messages.map((m, idx) => (
                             m.system ? (
                                 <div key={idx} className="flex items-center gap-2 justify-center my-3">
@@ -338,25 +338,13 @@ const WatchParty = () => {
                                     <span className="text-[10px] text-gray-400 italic">{m.text}</span>
                                     <div className="h-[1px] bg-white/10 w-8"></div>
                                 </div>
-                            ) : (
-                                <ChatMessage key={idx} msg={m} isMe={m.isMe} />
-                            )
+                            ) : <ChatMessage key={idx} msg={m} isMe={m.isMe} />
                         ))}
                     </div>
 
-                    {/* Input Chat */}
                     <form onSubmit={handleSend} className="p-3 bg-white/5 border-t border-white/10 flex gap-2">
-                        <input
-                            type="text"
-                            value={inputMsg}
-                            autoFocus
-                            onChange={(e) => setInputMsg(e.target.value)}
-                            placeholder="Nhập tin nhắn..."
-                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/50 focus:bg-black/60 transition-all placeholder-gray-600"
-                        />
-                        <button type="submit" className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-xl transition-all shadow-lg active:scale-95">
-                            <FaPaperPlane size={14} />
-                        </button>
+                        <input type="text" value={inputMsg} autoFocus onChange={(e) => setInputMsg(e.target.value)} placeholder="Nhập tin nhắn..." className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/50 focus:bg-black/60 transition-all placeholder-gray-600" />
+                        <button type="submit" className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-xl transition-all shadow-lg active:scale-95"><FaPaperPlane size={14} /></button>
                     </form>
                 </div>
             </div>
