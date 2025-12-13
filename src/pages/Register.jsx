@@ -1,66 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { register, getCurrentUser } from '../services/authService'; // Thêm getCurrentUser
+import { register, getCurrentUser } from '../services/authService';
 import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaIdCard, FaCheckCircle, FaExclamationCircle, FaTimes } from 'react-icons/fa';
 import LogoImg from '../assets/logo.png';
 
-// --- TOAST COMPONENT (GIỮ NGUYÊN) ---
 const Toast = ({ type, message, onClose }) => {
-    useEffect(() => {
-        const timer = setTimeout(onClose, 3000);
-        return () => clearTimeout(timer);
-    }, [onClose]);
-
+    useEffect(() => { const timer = setTimeout(onClose, 3000); return () => clearTimeout(timer); }, [onClose]);
     const isSuccess = type === 'success';
-
     return (
-        <div className={`
-            fixed top-6 right-6 z-[200] 
-            flex items-center gap-4 
-            px-6 py-4 rounded-xl border-l-4 
-            backdrop-blur-md animate-fade-in-down transition-all shadow-2xl
-            ${isSuccess 
-                ? 'bg-green-900/90 text-white border-green-500 shadow-green-900/30' 
-                : 'bg-red-900/90 text-white border-red-600 shadow-red-900/30'}
-        `}>
-            <div className={`p-1 rounded-full ${isSuccess ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-                {isSuccess ? <FaCheckCircle className="text-xl text-green-400" /> : <FaExclamationCircle className="text-xl text-red-400" />}
-            </div>
+        <div className={`fixed top-6 right-6 z-[200] flex items-center gap-4 px-6 py-4 rounded-xl border-l-4 backdrop-blur-md animate-fade-in-down transition-all shadow-2xl ${isSuccess ? 'bg-green-900/90 text-white border-green-500 shadow-green-900/30' : 'bg-red-900/90 text-white border-red-600 shadow-red-900/30'}`}>
+            <div className={`p-1 rounded-full ${isSuccess ? 'bg-green-500/20' : 'bg-red-500/20'}`}>{isSuccess ? <FaCheckCircle className="text-xl text-green-400" /> : <FaExclamationCircle className="text-xl text-red-400" />}</div>
             <div>
-                <h4 className={`font-bold text-sm uppercase tracking-wider ${isSuccess ? 'text-green-400' : 'text-red-400'}`}>
-                    {isSuccess ? 'Thành công' : 'Thông báo'}
-                </h4>
+                <h4 className={`font-bold text-sm uppercase tracking-wider ${isSuccess ? 'text-green-400' : 'text-red-400'}`}>{isSuccess ? 'Thành công' : 'Thông báo'}</h4>
                 <p className="text-xs opacity-90 mt-0.5 text-gray-100">{message}</p>
             </div>
-            <button onClick={onClose} className="ml-2 text-white/50 hover:text-white transition">
-                <FaTimes />
-            </button>
+            <button onClick={onClose} className="ml-2 text-white/50 hover:text-white transition"><FaTimes /></button>
         </div>
     );
 };
 
 const Register = () => {
   const navigate = useNavigate();
-  
-  const [formData, setFormData] = useState({ 
-      fullname: '', 
-      username: '', 
-      email: '', 
-      password: '',
-      confirmPassword: '' 
-  });
-  
+  const [formData, setFormData] = useState({ fullname: '', username: '', email: '', password: '', confirmPassword: '' });
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // --- LOGIC MỚI: Redirect nếu đã đăng nhập ---
-  useEffect(() => {
-      const user = getCurrentUser();
-      if (user) {
-          navigate('/'); // Đá về trang chủ nếu đã có session
-      }
-  }, [navigate]);
-  // -------------------------------------------
+  useEffect(() => { if (getCurrentUser()) navigate('/'); }, [navigate]);
 
   const handleSubmit = async (e) => {
       e.preventDefault();
@@ -72,14 +37,14 @@ const Register = () => {
       }
 
       setLoading(true);
-
       try {
           const { confirmPassword, ...dataToSend } = formData;
           await register(dataToSend);
           setToast({ type: 'success', message: 'Đăng ký thành công! Đang chuyển hướng...' });
           setTimeout(() => navigate('/login'), 1500);
       } catch (err) {
-          setToast({ type: 'error', message: err.toString() });
+          const msg = err.response?.data?.message || err.message || "Đăng ký thất bại";
+          setToast({ type: 'error', message: msg });
       } finally {
           setLoading(false);
       }
@@ -87,27 +52,17 @@ const Register = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center relative overflow-hidden font-sans py-10">
-        {/* Background */}
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 blur-sm scale-105 animate-pulse-slow"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/50"></div>
 
-        {/* HIỂN THỊ TOAST */}
         {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
         <div className="relative z-10 w-full max-w-lg p-8 bg-black/60 backdrop-blur-xl rounded-2xl shadow-[0_0_40px_rgba(229,9,20,0.2)] border border-white/10 animate-fade-in-up">
-            <button onClick={() => navigate('/')} className="absolute top-5 left-5 text-gray-400 hover:text-white transition p-2 hover:bg-white/10 rounded-full">
-                <FaArrowLeft />
-            </button>
+            <button onClick={() => navigate('/')} className="absolute top-5 left-5 text-gray-400 hover:text-white transition p-2 hover:bg-white/10 rounded-full"><FaArrowLeft /></button>
 
-             {/* --- PHẦN LOGO --- */}
              <div className="text-center mb-8 flex justify-center">
-                 <img 
-                    src={LogoImg} 
-                    alt="PhimVietHay Logo" 
-                    className="h-16 md:h-20 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300" 
-                 />
+                 <img src={LogoImg} alt="PhimVietHay Logo" className="h-16 md:h-20 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300" />
             </div>
-            {/* ---------------------- */}
 
             <h2 className="text-2xl font-bold text-white mb-6 text-center tracking-wide">Đăng Ký Thành Viên</h2>
 

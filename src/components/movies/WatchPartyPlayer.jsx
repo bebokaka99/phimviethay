@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Artplayer from 'artplayer';
 import Hls from 'hls.js';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FaList, FaStepForward, FaForward, FaPause, FaLock } from 'react-icons/fa'; // [FIX] Thêm icon
+import { FaList, FaStepForward, FaForward, FaPause, FaLock, FaTimes } from 'react-icons/fa';
 import { MdReplay10, MdForward10 } from 'react-icons/md';
 
 import { getCurrentUser } from '../../services/authService';
@@ -15,19 +15,13 @@ const STYLES = `
         .art-control-rewind-10, .art-control-forward-10 { display: none !important; }
     }
     .animate-in { animation: slideInRight 0.5s ease-out forwards; }
-
     /* GUEST MODE */
     .art-guest-mode .art-control-progress,
     .art-guest-mode .art-control-time,
     .art-guest-mode .art-control-rewind-10,
     .art-guest-mode .art-control-forward-10,
-    .art-guest-mode .art-control-skip-intro {
-        display: none !important;
-    }
-    .art-guest-mode .art-bottom {
-        background: linear-gradient(transparent, rgba(0,0,0,0.8)) !important;
-    }
-
+    .art-guest-mode .art-control-skip-intro { display: none !important; }
+    .art-guest-mode .art-bottom { background: linear-gradient(transparent, rgba(0,0,0,0.8)) !important; }
     /* LIVE BADGE */
     .wp-live-badge { display: flex; align-items: center; height: 100%; padding: 0 10px; cursor: default; font-weight: 700; font-size: 13px; transition: all 0.2s; }
     .wp-live-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; transition: background-color 0.3s; }
@@ -42,22 +36,15 @@ const STYLES = `
 const WatchPartyPlayer = ({ 
     movieSlug, option, style, episodes, servers, currentEp, 
     onEpChange, onServerChange, currentServerIndex, onNextEp, hasNextEp, 
-    onArtReady, 
-    isGuest = false, 
-    startTime = 0,      
-    hostCurrentTime = 0, 
-    onSyncClick,
-    isHostPaused = false, // [FIX] Nhận prop từ cha
-    ...rest 
+    onArtReady, isGuest = false, startTime = 0, hostCurrentTime = 0, 
+    onSyncClick, isHostPaused = false, ...rest 
 }) => {
     const artRef = useRef(null);
     const playerRef = useRef(null);
-    
-    // --- REFS ---
     const hostTimeRef = useRef(0);
     const lastPacketTimeRef = useRef(Date.now()); 
     const onSyncClickRef = useRef(null);
-    const isHostPausedRef = useRef(isHostPaused); // [FIX] Ref để track pause
+    const isHostPausedRef = useRef(isHostPaused);
 
     useEffect(() => { 
         hostTimeRef.current = hostCurrentTime;
@@ -66,11 +53,10 @@ const WatchPartyPlayer = ({
 
     useEffect(() => { onSyncClickRef.current = onSyncClick; }, [onSyncClick]);
     
-    // [FIX] Cập nhật ref và xử lý pause ngay khi prop thay đổi
     useEffect(() => { 
         isHostPausedRef.current = isHostPaused;
         if (isGuest && isHostPaused && playerRef.current) {
-            playerRef.current.pause(); // Force pause nếu host đang pause
+            playerRef.current.pause();
         }
     }, [isHostPaused, isGuest]);
 
@@ -85,11 +71,12 @@ const WatchPartyPlayer = ({
     const isIntroDismissed = useRef(false); 
     const episodesRef = useRef(episodes);
     const onNextEpRef = useRef(onNextEp);
+    const [progressWidth, setProgressWidth] = useState(100);
 
     useEffect(() => { episodesRef.current = episodes; }, [episodes]);
     useEffect(() => { onNextEpRef.current = onNextEp; }, [onNextEp]);
 
-    // DATA & HELPERS (Giữ nguyên)
+    // DATA & HELPERS
     useEffect(() => {
         setUser(getCurrentUser());
         introDataRef.current = null;
@@ -100,6 +87,7 @@ const WatchPartyPlayer = ({
         }
     }, [movieSlug, currentEp]);
 
+    // Admin Shortcuts
     useEffect(() => {
         if (!user || user.role !== 'admin') return;
         const handleKeyDown = async (e) => {
@@ -114,16 +102,27 @@ const WatchPartyPlayer = ({
 
     const handleSmartSkip = () => { const art = playerRef.current; const data = introDataRef.current; if (art && data?.intro_end) { art.currentTime = data.intro_end; art.play(); setShowSmartSkip(false); } };
     const handleManualNext = (e) => { if (e) e.stopPropagation(); if (isGuest) return alert("Chỉ chủ phòng mới được chuyển tập!"); if (hasNextEp && onNextEpRef.current) onNextEpRef.current(); };
+    
     const checkTimeUpdate = (art) => {
         const currentTime = art.currentTime; const duration = art.duration; const intro = introDataRef.current;
         let shouldShowSkip = false; if (intro && intro.intro_end && !isIntroDismissed.current) { if (currentTime >= intro.intro_start && currentTime < intro.intro_end) shouldShowSkip = true; }
         setShowSmartSkip(prev => prev !== shouldShowSkip ? shouldShowSkip : prev);
+        
         if (isAutoNextDismissed.current || !hasNextEp) { setShowAutoNext(false); return; }
         let isEnding = false; if (intro && intro.credits_start) { if (currentTime >= intro.credits_start) isEnding = true; }
-        if (isEnding) { setShowAutoNext(true); const remaining = Math.ceil(duration - currentTime); setNextCount(remaining > 0 ? remaining : 0); if (remaining <= 1 && onNextEpRef.current && !isGuest) onNextEpRef.current(); } else { setShowAutoNext(false); }
+        
+        if (isEnding) { 
+            setShowAutoNext(true); 
+            const remaining = Math.ceil(duration - currentTime); 
+            setNextCount(remaining > 0 ? remaining : 0); 
+            // setProgressWidth Logic here if needed
+            if (remaining <= 1 && onNextEpRef.current && !isGuest) onNextEpRef.current(); 
+        } else { 
+            setShowAutoNext(false); 
+        }
     };
 
-    // 3. PLAYER INIT
+    // PLAYER INIT
     useEffect(() => {
         const art = new Artplayer({
             ...option,
@@ -159,21 +158,17 @@ const WatchPartyPlayer = ({
 
         if (isGuest) {
             art.controls.add({
-                name: 'live-badge',
-                position: 'right', index: 10,
+                name: 'live-badge', position: 'right', index: 10,
                 html: `<div class="wp-live-badge is-live"><div class="wp-live-dot"></div><span>TRỰC TIẾP</span></div>`,
                 click: function () {
                     const timeSinceUpdate = (Date.now() - lastPacketTimeRef.current) / 1000;
                     const projectedHostTime = hostTimeRef.current + timeSinceUpdate;
-                    const currentTime = art.currentTime; 
-                    const diff = Math.abs(currentTime - projectedHostTime);
+                    const diff = Math.abs(art.currentTime - projectedHostTime);
                     if (diff > 3) { 
                         art.currentTime = projectedHostTime; 
                         art.play();
                         art.notice.show = `Đã đồng bộ lại với chủ phòng`;
                         if (onSyncClickRef.current) onSyncClickRef.current();
-                    } else {
-                        art.notice.show = 'Tín hiệu đang tốt (Lệch < 3s)';
                     }
                 },
                 style: { display: 'flex', marginRight: '10px' }
@@ -193,15 +188,7 @@ const WatchPartyPlayer = ({
         const panelClass = "art-panel-drawer absolute top-0 w-1/3 min-w-[200px] h-[calc(100%-48px)] bg-black/80 backdrop-blur-xl border-l border-white/10 shadow-2xl flex flex-col z-[200] rounded-bl-xl pointer-events-auto";
         art.layers.add({ name: 'episode-panel', html: `<div id="ep" class="${panelClass}"><div class="p-4 border-b border-white/10 flex justify-between items-center text-white font-bold text-sm uppercase"><span>Danh Sách Tập</span><span class="close-panel cursor-pointer">✕</span></div><div id="episode-content" class="flex-1 overflow-y-auto p-2 custom-scrollbar"></div></div>`, style: { display: 'none', zIndex: 999, pointerEvents: 'none', inset: 0, position: 'absolute' }, mounted: ($el) => { $el.querySelector('.close-panel').onclick = () => togglePanel('episode-panel'); } });
 
-        // [FIX] SỰ KIỆN CHẶN PLAY KHI HOST PAUSED
-        art.on('play', () => {
-            // Nếu là Guest và Host đang pause -> Chặn ngay
-            if (isGuest && isHostPausedRef.current) {
-                art.pause();
-                art.notice.show = "🔒 Chủ phòng đang tạm dừng phim!";
-            }
-        });
-
+        art.on('play', () => { if (isGuest && isHostPausedRef.current) { art.pause(); art.notice.show = "🔒 Chủ phòng đang tạm dừng phim!"; } });
         art.on('video:timeupdate', () => { checkTimeUpdate(art); });
         art.on('seeked', () => checkTimeUpdate(art));
 
@@ -263,7 +250,6 @@ const WatchPartyPlayer = ({
             <style>{STYLES}</style>
             <div ref={artRef} className="w-full h-full"></div>
 
-            {/* [FIX] OVERLAY KHI HOST PAUSE */}
             {isGuest && isHostPaused && (
                 <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px] animate-fade-in pointer-events-auto cursor-not-allowed">
                     <div className="bg-[#12141a]/90 border border-white/10 px-8 py-6 rounded-2xl flex flex-col items-center gap-3 shadow-2xl transform scale-105">
@@ -271,9 +257,7 @@ const WatchPartyPlayer = ({
                             <FaPause className="text-red-500 text-xl animate-pulse" />
                         </div>
                         <h3 className="text-white font-bold text-lg">Phim đang tạm dừng</h3>
-                        <p className="text-gray-400 text-xs flex items-center gap-1.5">
-                            <FaLock size={10}/> Vui lòng chờ chủ phòng tiếp tục
-                        </p>
+                        <p className="text-gray-400 text-xs flex items-center gap-1.5"><FaLock size={10}/> Vui lòng chờ chủ phòng tiếp tục</p>
                     </div>
                 </div>
             )}

@@ -1,17 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react'; // Import Suspense
 import { Helmet } from 'react-helmet-async';
 import HeroSection from '../components/movies/HeroSection';
-import LazyMovieRow from '../components/movies/LazyMovieRow';
-import { HomeSkeleton } from '../components/common/Skeleton';
-import { getHomeData } from '../services/movieService'; // Đã xóa getTrendingMovies
+// Load Lazy Component để tách bundle
+const LazyMovieRow = React.lazy(() => import('../components/movies/LazyMovieRow'));
+import { HomeSkeleton, RowSkeleton } from '../components/common/Skeleton'; // Import thêm RowSkeleton
+import { getHomeData } from '../services/movieService';
 
 const Home = () => {
   const [loadingBanner, setLoadingBanner] = useState(true);
-  
-  // Dữ liệu ưu tiên (Chỉ còn Banner)
   const [bannerMovies, setBannerMovies] = useState([]);
 
-  // Cấu hình các danh mục phim
   const ROW_CONFIG = [
     { title: "Phim Lẻ Mới Cập Nhật", slug: "phim-le", type: "danh-sach" },
     { title: "Phim Bộ Hot", slug: "phim-bo", type: "danh-sach" },
@@ -23,22 +21,19 @@ const Home = () => {
     { title: "TV Shows", slug: "tv-shows", type: "danh-sach" },
   ];
 
-  // 1. Chỉ tải Banner (Nhanh hơn rất nhiều)
   useEffect(() => {
     const fetchPriorityData = async () => {
         try {
             const bannerData = await getHomeData();
-
             if (bannerData?.data?.items) {
                 setBannerMovies(bannerData.data.items.slice(0, 8));
             }
         } catch (err) {
-            console.error("Lỗi tải trang chủ:", err);
+            console.error("Home Load Error:", err);
         } finally {
             setLoadingBanner(false);
         }
     };
-    
     fetchPriorityData();
   }, []);
 
@@ -48,23 +43,22 @@ const Home = () => {
     <div className="min-h-screen bg-phim-dark pb-20 overflow-x-hidden">
       <Helmet>
         <title>PhimVietHay - Xem Phim Online HD Vietsub</title>
-        <meta name="description" content="Xem phim online chất lượng cao miễn phí..." />
+        <meta name="description" content="Web xem phim miễn phí, chất lượng cao, cập nhật nhanh nhất." />
       </Helmet>
 
-      {/* Banner */}
+      {/* Banner Priority */}
       <HeroSection movies={bannerMovies} />
       
-      {/* Danh sách phim (Bỏ Trending, đẩy các mục khác lên) */}
+      {/* Lazy Load Rows */}
       <div className="relative z-10 px-0 space-y-2 md:space-y-4 pb-10 mt-8 md:mt-12 bg-gradient-to-b from-phim-dark/0 via-phim-dark to-phim-dark">
-            
-            {/* Các danh mục phim Load Lazy */}
             {ROW_CONFIG.map((row, index) => (
-                <LazyMovieRow 
-                    key={index} 
-                    title={row.title} 
-                    slug={row.slug} 
-                    type={row.type} 
-                />
+                <Suspense key={index} fallback={<div className="h-40 bg-white/5 animate-pulse mx-4 rounded-xl"/>}>
+                    <LazyMovieRow 
+                        title={row.title} 
+                        slug={row.slug} 
+                        type={row.type} 
+                    />
+                </Suspense>
             ))}
       </div>
     </div>

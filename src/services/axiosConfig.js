@@ -1,25 +1,24 @@
 import axios from 'axios';
 
 // TỰ ĐỘNG CHỌN URL DỰA TRÊN MÔI TRƯỜNG
-// Nếu có biến môi trường VITE_API_URL thì dùng, không thì dùng localhost
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const instance = axios.create({
     baseURL: BASE_URL, 
-    timeout: 10000,
+    // [TỐI ƯU] Tăng lên 50s để chờ Server Render "tỉnh ngủ" (Cold Start)
+    timeout: 50000, 
     headers: { 'Content-Type': 'application/json' },
 });
 
-// Biến cờ ngăn chặn redirect liên tục
+// Biến cờ ngăn chặn redirect liên tục (Logic cũ của bạn rất tốt, giữ nguyên)
 let isRedirecting = false;
 
 // --- 1. REQUEST INTERCEPTOR ---
 instance.interceptors.request.use(
     (config) => {
-        // Nếu đang trong quá trình bị đá ra (redirect), chặn tất cả request khác để tránh lỗi chồng chéo
-        // (Ngoại trừ request Login/Register để người dùng còn đăng nhập lại được)
+        // Chặn request chồng chéo khi đang bị đá văng
         if (isRedirecting && !config.url.includes('/auth/')) {
-            return new Promise(() => {}); // Treo request vĩnh viễn
+            return new Promise(() => {}); // Treo request
         }
 
         const token = localStorage.getItem('token'); 
@@ -34,11 +33,12 @@ instance.interceptors.request.use(
 // --- 2. RESPONSE INTERCEPTOR ---
 instance.interceptors.response.use(
     (response) => {
-        // Nếu gọi API Login thành công -> Mở khóa hệ thống
+        // Mở khóa nếu login thành công
         if (response.config.url.includes('/auth/')) {
             isRedirecting = false;
         }
-        return response;
+        // [TỐI ƯU] Trả về thẳng data để code trong Component gọn hơn (bỏ bớt .data)
+        return response.data; 
     },
     (error) => {
         // Nếu đang redirect thì lờ đi mọi lỗi khác
@@ -48,28 +48,33 @@ instance.interceptors.response.use(
 
         const { response } = error;
 
+        // [MỚI] Bắt lỗi Rate Limit (429) từ Server
+        if (response && response.status === 429) {
+            console.warn("Bạn đang thao tác quá nhanh, vui lòng chậm lại!");
+            // Có thể return Promise.reject để UI hiện thông báo riêng nếu cần
+            return Promise.reject(error);
+        }
+
         // Bắt lỗi 401 (Unauthorized) hoặc 403 (Forbidden)
         if (response && (response.status === 401 || response.status === 403)) {
             
-            // Trường hợp ngoại lệ: Đang ở trang Login mà nhập sai mật khẩu (cũng bị 401)
-            // Thì phải trả lỗi về để Form hiện thông báo "Sai mật khẩu"
+            // Ngoại lệ: Sai pass khi đang login -> Trả lỗi về cho Form xử lý
             if (response.config.url.includes('/auth/')) {
                 return Promise.reject(error);
             }
 
-            // Các trường hợp khác: Token hết hạn thật -> Xử lý logout
+            // Token hết hạn thật -> Logout & Redirect
             if (!isRedirecting) {
-                isRedirecting = true; // Khóa hệ thống ngay lập tức
+                isRedirecting = true;
                 
-                // Dọn dẹp dữ liệu rác
+                // Dọn dẹp
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
 
-                // Chuyển hướng cứng về Login kèm thông báo
+                // Redirect cứng
                 window.location.href = '/login?expired=true';
             }
             
-            // Treo Promise để component gọi API không bị crash
             return new Promise(() => {}); 
         }
 

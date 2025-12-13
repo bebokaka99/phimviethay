@@ -1,0 +1,23 @@
+{
+  "name": "PhimVietHay",
+  "short_name": "PhimVietHay",
+  "description": "Xem phim Online HD Vietsub chất lượng cao miễn phí",
+  "theme_color": "#0a0e17",
+  "background_color": "#0a0e17",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,15 +1,11 @@
-// --- QUAN TRỌNG: Import từ file cấu hình của chúng ta ---
 import axios from './axiosConfig'; 
-
-// Không cần BASE_URL nữa vì axios đã có sẵn
-// Không cần getAuthHeader nữa vì axios tự động gắn token
 
 // --- AUTH API ---
 
 export const register = async (userData) => {
     try {
-        const response = await axios.post('/auth/register', userData);
-        return response.data;
+        const data = await axios.post('/auth/register', userData);
+        return data; // AxiosConfig đã trả về data rồi
     } catch (error) {
         throw error.response?.data?.message || 'Lỗi kết nối server';
     }
@@ -17,14 +13,14 @@ export const register = async (userData) => {
 
 export const login = async (userData) => {
     try {
-        const response = await axios.post('/auth/login', userData);
+        const res = await axios.post('/auth/login', userData);
         
-        if (response.data.token) {
-            localStorage.setItem('user', JSON.stringify(response.data.user));
-            localStorage.setItem('token', response.data.token);
+        if (res.token) {
+            localStorage.setItem('user', JSON.stringify(res.user));
+            localStorage.setItem('token', res.token);
         }
         
-        return response.data;
+        return res;
     } catch (error) {
         throw error.response?.data?.message || 'Sai email hoặc mật khẩu';
     }
@@ -33,7 +29,7 @@ export const login = async (userData) => {
 export const logout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    window.location.href = '/login'; // Redirect cứng cho sạch
+    window.location.href = '/login'; 
 };
 
 export const getCurrentUser = () => {
@@ -46,31 +42,23 @@ export const getCurrentUser = () => {
 
 export const getFavorites = async () => {
     try {
-        // Axios tự gắn token, không cần getAuthHeader()
-        const response = await axios.get('/user/favorites');
-        return response.data;
-    } catch (error) {
-        return [];
-    }
+        const data = await axios.get('/user/favorites');
+        return data; // [SỬA] Bỏ .data
+    } catch (error) { return []; }
 };
 
 export const checkFavoriteStatus = async (slug) => {
     if (!localStorage.getItem('token')) return false;
     try {
-        const response = await axios.get(`/user/favorites/check/${slug}`);
-        return response.data.isFavorite;
-    } catch (error) { 
-        return false; 
-    }
+        const res = await axios.get(`/user/favorites/check/${slug}`);
+        return res.isFavorite;
+    } catch (error) { return false; }
 };
 
 export const toggleFavorite = async (movie) => {
-    if (!localStorage.getItem('token')) throw "Vui lòng đăng nhập để lưu phim!";
-    
+    if (!localStorage.getItem('token')) throw "Vui lòng đăng nhập!";
     try {
-        // Gọi lại hàm check đã sửa ở trên
         const isFav = await checkFavoriteStatus(movie.slug);
-        
         if (isFav) {
             await axios.delete(`/user/favorites/${movie.slug}`);
             return false; 
@@ -86,18 +74,16 @@ export const toggleFavorite = async (movie) => {
             });
             return true; 
         }
-    } catch (error) {
-        throw "Lỗi kết nối server";
-    }
+    } catch (error) { throw "Lỗi kết nối server"; }
 };
 
 export const updateProfile = async (data) => {
     try {
-        const response = await axios.put('/user/profile', data);
-        if (response.data.user) {
-            localStorage.setItem('user', JSON.stringify(response.data.user));
+        const res = await axios.put('/user/profile', data);
+        if (res.user) {
+            localStorage.setItem('user', JSON.stringify(res.user));
         }
-        return response.data;
+        return res; // [SỬA] Bỏ .data
     } catch (error) {
         throw error.response?.data?.message || 'Lỗi cập nhật';
     }
@@ -108,41 +94,28 @@ export const updateProfile = async (data) => {
 export const setWatchHistory = async (data) => {
     const token = localStorage.getItem('token');
     if (!token) return;
-
     try {
         await axios.post('/user/history', data);
-    } catch (error) {
-        console.error("Lỗi ghi lịch sử:", error);
-    }
+    } catch (error) { console.error("History Error", error); }
 };
 
 export const getWatchHistory = async () => {
     const token = localStorage.getItem('token');
     if (!token) return [];
-
     try {
-        const response = await axios.get('/user/history');
-        return response.data;
-    } catch (error) {
-        return [];
-    }
+        const data = await axios.get('/user/history');
+        return data; // [SỬA] Bỏ .data
+    } catch (error) { return []; }
 };
 
 export const clearWatchHistory = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
-    
-    try {
-        await axios.delete('/user/history');
-    } catch (error) {
-        throw error;
-    }
+    try { await axios.delete('/user/history'); } catch (e) { throw e; }
 };
 
 export const removeWatchHistoryItem = async (slug) => {
     const token = localStorage.getItem('token');
     if (!token) return;
-    try {
-        await axios.delete(`/user/history/${slug}`);
-    } catch (error) { throw error; }
+    try { await axios.delete(`/user/history/${slug}`); } catch (e) { throw e; }
 };

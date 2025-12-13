@@ -7,8 +7,7 @@ import WatchPartyPlayer from '../components/movies/WatchPartyPlayer';
 import { getMovieDetail, searchMovies, IMG_URL } from '../services/movieService';
 import { getCurrentUser } from '../services/authService';
 
-// --- SUB COMPONENTS ---
-
+// --- SUB COMPONENTS (Giữ nguyên logic hiển thị) ---
 const ChatMessage = ({ msg, isMe, isHost, onDelete }) => { 
     const avatarUrl = msg.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.user?.name || 'K')}&background=random&color=fff&size=128`; 
     return (
@@ -42,13 +41,10 @@ const ViewerList = ({ viewers, onClose }) => {
 
 const Toast = ({ msg }) => { if (!msg) return null; return <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[300] bg-white/10 backdrop-blur-md border border-red-500/50 text-white px-6 py-3 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.4)] flex items-center gap-3 animate-bounce font-bold pointer-events-none"><FaLock className="text-red-500"/> {msg}</div>; };
 
-// --- MAIN COMPONENT ---
-
 const WatchParty = () => {
     const { roomId } = useParams();
     const navigate = useNavigate();
     
-    // User Identity
     const [currentUser] = useState(() => { 
         const user = getCurrentUser(); 
         if (user) return { id: user.id || user._id, name: user.fullname || user.name || user.username, avatar: user.avatar };
@@ -59,26 +55,18 @@ const WatchParty = () => {
 
     const [isHost, setIsHost] = useState(false);
     const [isJoined, setIsJoined] = useState(false); 
-    
-    // Chat & Viewers
     const [messages, setMessages] = useState([]);
     const [inputMsg, setInputMsg] = useState('');
     const [viewers, setViewers] = useState([]); 
     const [showViewerList, setShowViewerList] = useState(false); 
-    
-    // Movie Data
     const [movie, setMovie] = useState(null);
     const [episodes, setEpisodes] = useState([]);
     const [currentEpisode, setCurrentEpisode] = useState(null);
-
-    // Sync & Player State
     const [initialTime, setInitialTime] = useState(0); 
     const [hostCurrentTime, setHostCurrentTime] = useState(0); 
     const [isReadyToWatch, setIsReadyToWatch] = useState(false); 
     const [isSyncing, setIsSyncing] = useState(false);
     const [isHostPaused, setIsHostPaused] = useState(false);
-
-    // UI
     const [toastMsg, setToastMsg] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
@@ -121,26 +109,15 @@ const WatchParty = () => {
             if (data.time) setHostCurrentTime(data.time); 
 
             switch (data.action) {
-                case 'play': 
-                    setIsHostPaused(false); 
-                    if (art && !art.playing) art.play(); 
-                    break;
-                case 'pause': 
-                    setIsHostPaused(true); 
-                    if (art) { art.pause(); art.currentTime = data.time; } 
-                    break;
-                case 'seek': 
-                    if (art) art.currentTime = data.time; 
-                    break;
+                case 'play': setIsHostPaused(false); if (art && !art.playing) art.play(); break;
+                case 'pause': setIsHostPaused(true); if (art) { art.pause(); art.currentTime = data.time; } break;
+                case 'seek': if (art) art.currentTime = data.time; break;
                 case 'change_movie': 
                     if (data.slug !== currentMovieRef.current?.slug) {
-                        setIsReadyToWatch(false); 
-                        setInitialTime(0);
-                        setIsHostPaused(false);
+                        setIsReadyToWatch(false); setInitialTime(0); setIsHostPaused(false);
                         loadMovieData(data.slug); 
                     }
                     break;
-                case 'change_ep': break;
                 case 'sync_current_state':
                     setIsSyncing(false);
                     setInitialTime(data.time);
@@ -164,7 +141,6 @@ const WatchParty = () => {
             setTimeout(() => { isRemoteUpdate.current = false; }, 800);
         });
 
-        // Chat
         const handleMsg = (data) => setMessages((prev) => [...prev, { ...data, isMe: false }]);
         socket.on("receive_message", handleMsg);
         socket.on("message_deleted", ({ messageId }) => { setMessages(prev => prev.filter(m => m.id !== messageId)); });
@@ -184,7 +160,6 @@ const WatchParty = () => {
 
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
-            // Nếu là Host và rời đi KHÔNG PHẢI do F5/Tắt tab -> Hủy phòng ngay
             if (isHost && !isPageReload) {
                 socket.emit("end_room", { roomId, userId: currentUser.id });
             }
@@ -225,7 +200,6 @@ const WatchParty = () => {
 
     if (!isJoined) return <div className="w-full h-screen flex items-center justify-center"><div className="text-white animate-pulse flex flex-col items-center gap-3"><FaSpinner className="animate-spin text-3xl"/><span>Đang vào phòng...</span></div></div>;
 
-    // --- SEO ---
     const pageTitle = movie ? `Đang chiếu: ${movie.name} | Watch Party` : `Phòng ${roomId} | Watch Party`;
     const pageDesc = movie ? `Tham gia ngay để xem phim ${movie.name} cùng bạn bè tại phòng ${roomId}.` : `Tham gia phòng xem chung ${roomId} để cùng thưởng thức các bộ phim hay.`;
     const pageImage = movie ? `${IMG_URL}${movie.thumb_url}` : 'https://i.imgur.com/YOUR_DEFAULT_BANNER.jpg';
@@ -238,33 +212,24 @@ const WatchParty = () => {
                 <meta property="og:title" content={pageTitle} />
                 <meta property="og:description" content={pageDesc} />
                 <meta property="og:image" content={pageImage} />
-                <meta property="og:url" content={window.location.href} />
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={pageTitle} />
-                <meta name="twitter:description" content={pageDesc} />
-                <meta name="twitter:image" content={pageImage} />
             </Helmet>
 
             {toastMsg && <Toast msg={toastMsg} />}
             
-            {/* Header */}
+            {/* Header (Giữ nguyên) */}
             <div className="max-w-[1500px] mx-auto w-full mb-6 flex flex-col lg:flex-row gap-4 justify-between items-center bg-white/5 backdrop-blur-xl border border-white/10 p-3 rounded-2xl shadow-lg relative z-[50]">
-                <div className="flex items-center gap-4 px-2">
-                    <div className={`w-3 h-3 rounded-full animate-pulse shadow-[0_0_12px] ${isHost ? 'bg-green-500 shadow-green-500' : 'bg-blue-500 shadow-blue-500'}`}></div>
-                    <div><h1 className="font-black text-white uppercase tracking-wider text-sm md:text-base flex items-center gap-2">ROOM #{roomId.substring(0,6)}{isHost && <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-[10px] px-2 py-0.5 rounded flex items-center gap-1"><FaCrown/> HOST</span>}</h1></div>
-                </div>
-                {isHost ? (
-                    <div className="relative w-full lg:w-[500px] group z-[60]">
-                        <div className="flex items-center bg-[#0a0e17]/60 border border-white/10 rounded-xl px-4 py-2.5 focus-within:border-red-500/50 focus-within:ring-1 focus-within:ring-red-500/50 transition-all"><FaSearch className="text-gray-500 mr-3 group-focus-within:text-white" /><input type="text" placeholder="Tìm phim để chiếu..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-transparent border-none text-sm text-white focus:outline-none w-full placeholder-gray-500" />{searchQuery && <FaTimes className="text-gray-500 cursor-pointer hover:text-red-500" onClick={() => {setSearchQuery(''); setShowDropdown(false);}} />}</div>
-                        {showDropdown && searchResults.length > 0 && (<div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1d26] border border-white/10 rounded-xl shadow-2xl max-h-96 overflow-y-auto custom-scrollbar animate-slide-up overflow-hidden">{searchResults.map((item) => (<div key={item._id} onClick={() => handleSelectMovie(item)} className="flex items-center gap-4 p-3 hover:bg-white/10 cursor-pointer transition-colors border-b border-white/5 last:border-0"><img src={`${IMG_URL}${item.thumb_url}`} alt={item.name} className="w-10 h-14 object-cover rounded bg-gray-800" /><div className="min-w-0"><h4 className="text-sm font-bold text-gray-100 truncate">{item.name}</h4><p className="text-xs text-gray-500 truncate">{item.origin_name}</p></div></div>))}</div>)}
-                    </div>
-                ) : <div className="hidden lg:block text-gray-500 text-xs italic">Đang chờ chủ phòng chọn phim...</div>}
+                {/* ... Header Content ... */}
+                <div className="flex items-center gap-4 px-2"><div className={`w-3 h-3 rounded-full animate-pulse shadow-[0_0_12px] ${isHost ? 'bg-green-500 shadow-green-500' : 'bg-blue-500 shadow-blue-500'}`}></div><div><h1 className="font-black text-white uppercase tracking-wider text-sm md:text-base flex items-center gap-2">ROOM #{roomId.substring(0,6)}{isHost && <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-[10px] px-2 py-0.5 rounded flex items-center gap-1"><FaCrown/> HOST</span>}</h1></div></div>
+                {isHost ? (<div className="relative w-full lg:w-[500px] group z-[60]"><div className="flex items-center bg-[#0a0e17]/60 border border-white/10 rounded-xl px-4 py-2.5 focus-within:border-red-500/50 focus-within:ring-1 focus-within:ring-red-500/50 transition-all"><FaSearch className="text-gray-500 mr-3 group-focus-within:text-white" /><input type="text" placeholder="Tìm phim để chiếu..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-transparent border-none text-sm text-white focus:outline-none w-full placeholder-gray-500" />{searchQuery && <FaTimes className="text-gray-500 cursor-pointer hover:text-red-500" onClick={() => {setSearchQuery(''); setShowDropdown(false);}} />}</div>{showDropdown && searchResults.length > 0 && (<div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1d26] border border-white/10 rounded-xl shadow-2xl max-h-96 overflow-y-auto custom-scrollbar animate-slide-up overflow-hidden">{searchResults.map((item) => (<div key={item._id} onClick={() => handleSelectMovie(item)} className="flex items-center gap-4 p-3 hover:bg-white/10 cursor-pointer transition-colors border-b border-white/5 last:border-0"><img src={`${IMG_URL}${item.thumb_url}`} alt={item.name} className="w-10 h-14 object-cover rounded bg-gray-800" /><div className="min-w-0"><h4 className="text-sm font-bold text-gray-100 truncate">{item.name}</h4><p className="text-xs text-gray-500 truncate">{item.origin_name}</p></div></div>))}</div>)}</div>) : <div className="hidden lg:block text-gray-500 text-xs italic">Đang chờ chủ phòng chọn phim...</div>}
                 <div className="flex gap-2 w-full lg:w-auto justify-end"><button onClick={copyLink} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-300 transition-all"><FaCopy /> ID: {roomId}</button>{isHost && <button onClick={handleEndRoom} className="flex items-center gap-2 bg-red-600/10 hover:bg-red-600 border border-red-600/30 hover:border-red-600 text-red-500 hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all"><FaPowerOff /> End</button>}</div>
             </div>
 
-            {/* Content Grid */}
-            <div className="max-w-[1500px] mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 h-[600px] lg:h-[calc(100vh-180px)]">
-                <div className="lg:col-span-3 bg-black rounded-3xl overflow-hidden border border-white/10 relative shadow-[0_0_40px_rgba(0,0,0,0.5)] ring-1 ring-white/5 group">
+            {/* Content Grid - [FIXED FOR MOBILE] */}
+            <div className="max-w-[1500px] mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 h-[calc(100vh-180px)] lg:h-[calc(100vh-180px)]">
+                
+                {/* 1. Player Column (Chiếm 100% trên Mobile) */}
+                {/* Thêm class w-full trên mobile để đảm bảo full width */}
+                <div className="lg:col-span-3 bg-black rounded-3xl overflow-hidden border border-white/10 relative shadow-[0_0_40px_rgba(0,0,0,0.5)] ring-1 ring-white/5 group w-full h-[60vh] lg:h-full">
                     {movie ? (
                         <>
                             {!isHost && !isReadyToWatch ? (
@@ -282,19 +247,13 @@ const WatchParty = () => {
                                 <div className="w-full h-full">
                                     {currentEpisode && (
                                         <WatchPartyPlayer
-                                            key={currentEpisode.slug} 
-                                            movieSlug={movie.slug}
-                                            episodes={episodes[0]?.server_data || []}
-                                            servers={episodes}
-                                            currentEp={currentEpisode}
-                                            currentServerIndex={0}
+                                            key={currentEpisode.slug} movieSlug={movie.slug}
+                                            episodes={episodes[0]?.server_data || []} servers={episodes}
+                                            currentEp={currentEpisode} currentServerIndex={0}
                                             onEpChange={(ep) => { setCurrentEpisode(ep); if (isHost) socket.emit("video_action", { roomId, action: 'change_ep', slug: movie.slug, epSlug: ep.slug }); }}
                                             onArtReady={onArtReady} 
-                                            isGuest={!isHost}
-                                            startTime={initialTime} 
-                                            hostCurrentTime={hostCurrentTime}
-                                            onSyncClick={handleForceSync}
-                                            isHostPaused={isHostPaused}
+                                            isGuest={!isHost} startTime={initialTime} hostCurrentTime={hostCurrentTime}
+                                            onSyncClick={handleForceSync} isHostPaused={isHostPaused}
                                             option={{ id: currentEpisode.slug, url: currentEpisode.link_m3u8, autoplay: true, theme: '#dc2626' }}
                                             style={{ width: '100%', height: '100%' }}
                                         />
@@ -307,8 +266,9 @@ const WatchParty = () => {
                     )}
                 </div>
                 
-                {/* Chat Column */}
-                <div className="lg:col-span-1 bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col overflow-hidden shadow-xl ring-1 ring-white/5 h-full max-h-[600px] lg:max-h-none relative">
+                {/* 2. Chat Column (Chiều cao giới hạn trên Mobile) */}
+                {/* Thêm class w-full trên mobile để đảm bảo full width */}
+                <div className="lg:col-span-1 bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col overflow-hidden shadow-xl ring-1 ring-white/5 w-full h-[600px] lg:h-full">
                     <div className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none" onClick={() => setShowViewerList(!showViewerList)}>
                         <div className="flex items-center gap-2 text-white font-bold text-sm uppercase tracking-wider"><FaUserFriends className="text-red-500" /> <span>Trò chuyện <span className="text-gray-500 text-xs">({viewers.length})</span></span></div>
                         <div className="text-gray-400">{showViewerList ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}</div>

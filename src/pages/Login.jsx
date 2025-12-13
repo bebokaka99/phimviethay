@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { login, getCurrentUser } from '../services/authService';
 import { FaArrowLeft, FaUser, FaLock, FaPlayCircle, FaExclamationTriangle } from 'react-icons/fa';
 
-// Component Thông báo đẹp
 const SessionExpiredAlert = ({ onClose }) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in">
         <div className="bg-[#1a1a1a] border border-red-500/30 p-6 rounded-2xl shadow-[0_0_50px_rgba(220,38,38,0.4)] max-w-sm w-full mx-4 text-center">
@@ -12,9 +11,7 @@ const SessionExpiredAlert = ({ onClose }) => (
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Phiên đăng nhập hết hạn</h3>
             <p className="text-gray-400 text-sm mb-6">Vui lòng đăng nhập lại để tiếp tục.</p>
-            <button onClick={onClose} className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all">
-                Đã hiểu
-            </button>
+            <button onClick={onClose} className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all">Đã hiểu</button>
         </div>
     </div>
 );
@@ -27,15 +24,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showExpiredModal, setShowExpiredModal] = useState(false);
 
-  // 1. Chặn truy cập nếu đã đăng nhập (Đá về trang chủ)
-  useEffect(() => {
-      const user = getCurrentUser();
-      if (user) {
-          navigate('/'); 
-      }
-  }, [navigate]);
+  useEffect(() => { if (getCurrentUser()) navigate('/'); }, [navigate]);
 
-  // 2. Kiểm tra thông báo hết phiên từ URL
   useEffect(() => {
       if (searchParams.get('expired') === 'true') {
           setShowExpiredModal(true);
@@ -49,14 +39,11 @@ const Login = () => {
       setLoading(true);
       try {
           await login(formData);
-          
-          // --- [ĐÃ SỬA] ---
-          // Chuyển tất cả về Trang chủ, không phân biệt quyền hạn
           navigate('/'); 
-          // ----------------
-
       } catch (err) {
-          setError(err.response?.data?.message || err.toString());
+          // Bắt lỗi chuẩn hơn: ưu tiên message từ server, nếu không có thì lấy text lỗi chung
+          const msg = err.response?.data?.message || err.message || "Đăng nhập thất bại";
+          setError(msg);
       } finally {
           setLoading(false);
       }
@@ -67,14 +54,10 @@ const Login = () => {
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 blur-sm scale-105 animate-pulse-slow"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40"></div>
 
-        {/* Modal Hết phiên */}
         {showExpiredModal && <SessionExpiredAlert onClose={() => setShowExpiredModal(false)} />}
 
         <div className="relative z-10 w-full max-w-md p-8 md:p-10 bg-black/60 backdrop-blur-xl rounded-2xl shadow-[0_0_40px_rgba(229,9,20,0.2)] border border-white/10 animate-fade-in-up">
-            
-            <button onClick={() => navigate('/')} className="absolute top-5 left-5 text-gray-400 hover:text-white transition p-2 hover:bg-white/10 rounded-full">
-                <FaArrowLeft />
-            </button>
+            <button onClick={() => navigate('/')} className="absolute top-5 left-5 text-gray-400 hover:text-white transition p-2 hover:bg-white/10 rounded-full"><FaArrowLeft /></button>
 
             <div className="text-center mb-8">
                  <h1 className="text-phim-accent text-3xl font-black tracking-tighter uppercase drop-shadow-md select-none inline-flex items-center gap-2">
@@ -88,27 +71,13 @@ const Login = () => {
 
             <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors">
-                        <FaUser />
-                    </div>
-                    <input 
-                        type="text" placeholder="Email hoặc Tên đăng nhập" required
-                        className="w-full pl-12 pr-4 py-4 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    />
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaUser /></div>
+                    <input type="text" placeholder="Email hoặc Tên đăng nhập" required className="w-full pl-12 pr-4 py-4 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                 </div>
                 
                 <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors">
-                        <FaLock />
-                    </div>
-                    <input 
-                        type="password" placeholder="Mật khẩu" required
-                        className="w-full pl-12 pr-4 py-4 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500"
-                        value={formData.password}
-                        onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    />
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaLock /></div>
+                    <input type="password" placeholder="Mật khẩu" required className="w-full pl-12 pr-4 py-4 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
                 </div>
                 
                 <button disabled={loading} className="w-full py-4 rounded-xl bg-gradient-to-r from-phim-accent to-red-700 text-white font-bold text-lg hover:from-red-700 hover:to-phim-accent transition-all transform active:scale-[0.98] disabled:opacity-50 shadow-lg shadow-red-900/30 hover:shadow-red-900/50 relative overflow-hidden group">

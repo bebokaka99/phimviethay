@@ -1,18 +1,9 @@
 import axios from 'axios';
+import axiosInstance from './axiosConfig'; // [MỚI] Dùng instance đã cấu hình chuẩn
 
-// --- CẤU HÌNH API OPHIM (Dùng cho danh sách/tìm kiếm tạm thời) ---
+// --- CẤU HÌNH API OPHIM (Giữ nguyên vì gọi sang domain khác) ---
 const client = axios.create({
     baseURL: 'https://ophim1.com/v1/api',
-    headers: { 'Content-Type': 'application/json' }
-});
-
-// --- CẤU HÌNH API BACKEND CỦA MÌNH (QUAN TRỌNG) ---
-// Lấy URL từ file .env (Dev: localhost, Prod: onrender.com)
-// Nếu không tìm thấy biến môi trường -> Fallback về localhost để tránh lỗi
-const MY_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const MY_API = axios.create({
-    baseURL: MY_API_URL,
     headers: { 'Content-Type': 'application/json' }
 });
 
@@ -27,7 +18,6 @@ const resolveImg = (url) => {
     return `${DYNAMIC_CDN}${cleanPath}`;
 };
 
-// ... (Phần còn lại của file giữ nguyên không đổi)
 const processResponseData = (resData) => {
     if (resData?.data?.APP_DOMAIN_CDN_IMAGE) {
         DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
@@ -48,9 +38,10 @@ const processResponseData = (resData) => {
 export const getMovieDetail = async (slug) => {
     try {
         const cleanSlug = slug.replace(/^player-/, '');
-        // Gọi về API Backend (Tự động theo môi trường)
-        const response = await MY_API.get(`/movies/phim/${cleanSlug}`);
-        const resData = response.data;
+        
+        // [SỬA] Dùng axiosInstance thay vì MY_API tự tạo
+        // axiosInstance đã tự trả về .data rồi, nên ở đây nhận thẳng kết quả
+        const resData = await axiosInstance.get(`/movies/phim/${cleanSlug}`);
 
         if (resData?.data?.APP_DOMAIN_CDN_IMAGE) {
             DYNAMIC_CDN = `${resData.data.APP_DOMAIN_CDN_IMAGE}/uploads/movies/`;
@@ -78,8 +69,11 @@ export const getMovieDetail = async (slug) => {
 // 2. Lấy Trending từ Backend mình
 export const getTrendingMovies = async () => {
     try {
-        const res = await MY_API.get(`/movies/trending`);
-        return res.data.map(m => ({
+        // [SỬA] Dùng axiosInstance.get trả về mảng luôn
+        const data = await axiosInstance.get(`/movies/trending`);
+        
+        // Vì axiosInstance trả về data trực tiếp, nên data chính là mảng phim
+        return data.map(m => ({
             ...m,
             thumb_url: resolveImg(m.thumb_url),
             poster_url: resolveImg(m.poster_url),
@@ -90,7 +84,7 @@ export const getTrendingMovies = async () => {
     }
 };
 
-// ... (Các hàm getHomeData, getMoviesBySlug... gọi Ophim giữ nguyên)
+// ... (Các hàm gọi OPhim giữ nguyên vì dùng client riêng)
 export const getHomeData = async () => {
     try {
         const response = await client.get('/home');

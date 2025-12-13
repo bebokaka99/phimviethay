@@ -1,44 +1,39 @@
-import axios from 'axios';
+import axios from './axiosConfig'; // Dùng instance chuẩn
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const getAuthHeader = () => {
-    const token = localStorage.getItem('token');
-    return { headers: { Authorization: `Bearer ${token}` } };
-};
-
+// GET Comments
 export const getComments = async (slug, episode = null) => {
     try {
         const url = episode 
-            ? `${BASE_URL}/comments/${slug}?episode=${episode}` 
-            : `${BASE_URL}/comments/${slug}`;
+            ? `/comments/${slug}?episode=${episode}` 
+            : `/comments/${slug}`;
         
-        // Gửi kèm token để check like (nếu có)
-        const token = localStorage.getItem('token');
-        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-        
-        const res = await axios.get(url, config);
-        return res.data;
+        // Axios config tự động gắn token nếu có -> Backend sẽ biết user nào đang xem để check Like
+        const data = await axios.get(url);
+        return data; // Đã unwrap .data
     } catch (error) { return []; }
 };
 
+// ADD Comment
 export const addComment = async (data) => {
     try {
-        const res = await axios.post(`${BASE_URL}/comments`, data, getAuthHeader());
-        return res.data;
+        // Không cần getAuthHeader(), interceptor tự lo
+        const res = await axios.post(`/comments`, data);
+        return res; 
     } catch (error) { throw error; }
 };
 
+// LIKE
 export const toggleLikeComment = async (commentId) => {
     try {
-        await axios.post(`${BASE_URL}/comments/${commentId}/like`, {}, getAuthHeader());
+        await axios.post(`/comments/${commentId}/like`);
         return true;
     } catch (error) { return false; }
 };
 
+// DELETE
 export const deleteComment = async (id) => {
     try {
-        await axios.delete(`${BASE_URL}/comments/${id}`, getAuthHeader());
+        await axios.delete(`/comments/${id}`);
         return true;
     } catch (error) { return false; }
 };
