@@ -15,6 +15,7 @@ import History from "./pages/History";
 
 // [MỚI] Import trang Watch Party
 import WatchParty from "./pages/WatchParty";
+import WatchPartyLobby from "./pages/WatchPartyLobby";
 
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
@@ -24,16 +25,18 @@ import Intros from "./pages/admin/Intros";
 
 export const router = createBrowserRouter([
   {
-    element: <MainLayout />, 
+    element: <MainLayout />,
     children: [
       { path: "/", element: <Home /> },
       { path: "/phim/:slug", element: <MovieDetail /> },
       { path: "/xem-phim/:slug", element: <WatchMovie /> },
-      
+
       // [MỚI] Route Xem chung (Watch Party)
       // :roomId? nghĩa là tham số này có thể có hoặc không
-      { path: "/watch-party/:roomId?", element: <WatchParty /> },
-
+      { path: "/watch-party", element: <WatchPartyLobby /> },
+      // [UPDATE] Route vào phòng cụ thể
+      { path: "/watch-party/:roomId", element: <WatchParty /> },
+      
       { path: "/tim-kiem", element: <SearchPage /> },
       { path: "/the-loai/:slug", element: <Catalog group="the-loai" /> },
       { path: "/quoc-gia/:slug", element: <Catalog group="quoc-gia" /> },
@@ -60,8 +63,8 @@ export const router = createBrowserRouter([
     element: <AdminLayout />,
     children: [
       { index: true, element: <Dashboard /> },
-      { path: "users", element: <Users /> },   
-      { path: "comments", element: <Comments /> }, 
+      { path: "users", element: <Users /> },
+      { path: "comments", element: <Comments /> },
       { path: "intros", element: <Intros /> },
     ]
   },
