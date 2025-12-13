@@ -1,74 +1,40 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // [SEO] Import
 import { FaPaperPlane, FaUserFriends, FaCopy, FaPlay, FaSearch, FaTimes, FaLock, FaPowerOff, FaSpinner, FaCrown, FaTrash, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import socket from '../services/socket';
 import WatchPartyPlayer from '../components/movies/WatchPartyPlayer'; 
 import { getMovieDetail, searchMovies, IMG_URL } from '../services/movieService';
 import { getCurrentUser } from '../services/authService';
 
-// [COMPONENT] Tin nhắn Chat (Đã nâng cấp)
+// ... (Giữ nguyên component ChatMessage và ViewerList như cũ)
 const ChatMessage = ({ msg, isMe, isHost, onDelete }) => { 
     const avatarUrl = msg.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.user?.name || 'K')}&background=random&color=fff&size=128`; 
-    
     return (
         <div className={`flex items-start gap-3 mb-4 animate-fade-in-up group ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
             <div className="flex-shrink-0 relative">
                 <img src={avatarUrl} alt="Avt" className={`w-9 h-9 rounded-full border-2 shadow-sm object-cover ${msg.user?.isHost ? 'border-yellow-500' : 'border-white/10'}`} />
                 {msg.user?.isHost && <div className="absolute -top-1 -right-1 bg-yellow-500 text-black text-[8px] p-0.5 rounded-full"><FaCrown/></div>}
             </div>
-            
             <div className={`flex flex-col max-w-[75%] ${isMe ? 'items-end' : 'items-start'}`}>
                 <div className="flex items-center gap-2 mb-1">
                     {!isMe && <span className={`text-[11px] font-bold ${msg.user?.isHost ? 'text-yellow-500' : 'text-gray-400'}`}>{msg.user?.name}</span>}
                     {msg.user?.isHost && !isMe && <span className="text-[9px] bg-yellow-500/20 text-yellow-500 px-1 rounded border border-yellow-500/30">HOST</span>}
                 </div>
-                
                 <div className="relative group/msg">
-                    <div className={`px-4 py-2.5 text-sm shadow-md break-words leading-relaxed ${
-                        isMe 
-                        ? 'bg-gradient-to-br from-red-600 to-red-700 text-white rounded-2xl rounded-tr-none' 
-                        : 'bg-[#1a1d26] text-gray-200 border border-white/5 rounded-2xl rounded-tl-none'
-                    }`}>
-                        {msg.text}
-                    </div>
-                    
-                    {/* Nút Xóa (Chỉ hiện nếu mình là Host) */}
-                    {isHost && (
-                        <button 
-                            onClick={() => onDelete(msg.id)}
-                            className={`absolute top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-red-500 bg-black/50 rounded-full opacity-0 group-hover/msg:opacity-100 transition-all ${isMe ? '-left-8' : '-right-8'}`}
-                            title="Xóa tin nhắn"
-                        >
-                            <FaTrash size={10} />
-                        </button>
-                    )}
+                    <div className={`px-4 py-2.5 text-sm shadow-md break-words leading-relaxed ${isMe ? 'bg-gradient-to-br from-red-600 to-red-700 text-white rounded-2xl rounded-tr-none' : 'bg-[#1a1d26] text-gray-200 border border-white/5 rounded-2xl rounded-tl-none'}`}>{msg.text}</div>
+                    {isHost && (<button onClick={() => onDelete(msg.id)} className={`absolute top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-red-500 bg-black/50 rounded-full opacity-0 group-hover/msg:opacity-100 transition-all ${isMe ? '-left-8' : '-right-8'}`} title="Xóa tin nhắn"><FaTrash size={10} /></button>)}
                 </div>
             </div>
         </div>
     ); 
 };
 
-// [COMPONENT] Danh sách người xem (Dropdown)
 const ViewerList = ({ viewers, onClose }) => {
     return (
         <div className="absolute top-14 left-0 right-0 z-50 mx-4 bg-[#12141a] border border-white/10 rounded-xl shadow-2xl animate-slide-up overflow-hidden max-h-64 flex flex-col">
-            <div className="p-3 bg-white/5 border-b border-white/5 flex justify-between items-center">
-                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Đang xem ({viewers.length})</span>
-                <FaTimes className="text-gray-500 cursor-pointer hover:text-white" onClick={onClose} />
-            </div>
-            <div className="overflow-y-auto custom-scrollbar p-2">
-                {viewers.map((v, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors">
-                        <img src={v.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.name)}&background=random&color=fff`} className={`w-8 h-8 rounded-full object-cover border ${v.isHost ? 'border-yellow-500' : 'border-transparent'}`} alt=""/>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                                <span className={`text-sm font-bold truncate ${v.isHost ? 'text-yellow-500' : 'text-gray-300'}`}>{v.name}</span>
-                                {v.isHost && <FaCrown className="text-yellow-500 text-[10px]" />}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+            <div className="p-3 bg-white/5 border-b border-white/5 flex justify-between items-center"><span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Đang xem ({viewers.length})</span><FaTimes className="text-gray-500 cursor-pointer hover:text-white" onClick={onClose} /></div>
+            <div className="overflow-y-auto custom-scrollbar p-2">{viewers.map((v, i) => (<div key={i} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors"><img src={v.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.name)}&background=random&color=fff`} className={`w-8 h-8 rounded-full object-cover border ${v.isHost ? 'border-yellow-500' : 'border-transparent'}`} alt=""/><div className="flex-1 min-w-0"><div className="flex items-center gap-2"><span className={`text-sm font-bold truncate ${v.isHost ? 'text-yellow-500' : 'text-gray-300'}`}>{v.name}</span>{v.isHost && <FaCrown className="text-yellow-500 text-[10px]" />}</div></div></div>))}</div>
         </div>
     );
 };
@@ -90,18 +56,15 @@ const WatchParty = () => {
 
     const [isHost, setIsHost] = useState(false);
     const [isJoined, setIsJoined] = useState(false); 
-    
-    // [MỚI] Quản lý viewers và chat
     const [messages, setMessages] = useState([]);
     const [inputMsg, setInputMsg] = useState('');
-    const [viewers, setViewers] = useState([]); // Danh sách người xem
-    const [showViewerList, setShowViewerList] = useState(false); // Toggle dropdown
+    const [viewers, setViewers] = useState([]); 
+    const [showViewerList, setShowViewerList] = useState(false); 
     
     const [movie, setMovie] = useState(null);
     const [episodes, setEpisodes] = useState([]);
     const [currentEpisode, setCurrentEpisode] = useState(null);
 
-    // Sync State
     const [initialTime, setInitialTime] = useState(0); 
     const [hostCurrentTime, setHostCurrentTime] = useState(0); 
     const [isReadyToWatch, setIsReadyToWatch] = useState(false); 
@@ -127,153 +90,81 @@ const WatchParty = () => {
     useEffect(() => {
         if (!roomId) return;
         socket.connect();
-        
-        // [FIX] Gửi cả thông tin user khi join
         socket.emit("join_room", { roomId, userId: currentUser.id, userInfo: currentUser });
-
         socket.on("error_join", (msg) => { alert(msg); navigate('/watch-party'); });
-        
-        socket.on("joined_success", (data) => {
-            setIsJoined(true);
-            setIsHost(data.isHost);
-            if (data.movie) loadMovieData(data.movie.slug);
-            if (data.isHost) setIsReadyToWatch(true);
-        });
-
+        socket.on("joined_success", (data) => { setIsJoined(true); setIsHost(data.isHost); if (data.movie) loadMovieData(data.movie.slug); if (data.isHost) setIsReadyToWatch(true); });
         socket.on("role_update", (data) => { setIsHost(data.isHost); if (data.isHost) setIsReadyToWatch(true); showWarning("👑 Bạn đã trở thành Chủ phòng!"); });
         socket.on("room_destroyed", (reason) => { alert(reason); navigate('/watch-party'); });
-
-        // [MỚI] Nhận danh sách người xem
-        socket.on("update_viewers", (data) => {
-            setViewers(data);
-        });
-
+        socket.on("update_viewers", (data) => { setViewers(data); });
         socket.on("receive_video_action", (data) => {
             const art = artInstanceRef.current;
             if (data.action !== 'request_sync') isRemoteUpdate.current = true;
             if (data.time) setHostCurrentTime(data.time); 
-
             switch (data.action) {
-                case 'play': 
-                    setIsHostPaused(false); 
-                    if (art && !art.playing) art.play(); 
-                    break;
-                case 'pause': 
-                    setIsHostPaused(true); 
-                    if (art) { art.pause(); art.currentTime = data.time; } 
-                    break;
-                case 'seek': 
-                    if (art) art.currentTime = data.time; 
-                    break;
-                case 'change_movie': 
-                    if (data.slug !== currentMovieRef.current?.slug) {
-                        setIsReadyToWatch(false); 
-                        setInitialTime(0);
-                        setIsHostPaused(false);
-                        loadMovieData(data.slug); 
-                    }
-                    break;
+                case 'play': setIsHostPaused(false); if (art && !art.playing) art.play(); break;
+                case 'pause': setIsHostPaused(true); if (art) { art.pause(); art.currentTime = data.time; } break;
+                case 'seek': if (art) art.currentTime = data.time; break;
+                case 'change_movie': if (data.slug !== currentMovieRef.current?.slug) { setIsReadyToWatch(false); setInitialTime(0); setIsHostPaused(false); loadMovieData(data.slug); } break;
                 case 'change_ep': break;
-                case 'sync_current_state':
-                    setIsSyncing(false);
-                    setInitialTime(data.time);
-                    setHostCurrentTime(data.time);
-                    setIsHostPaused(!data.isPlaying); 
-                    if (data.slug !== currentMovieRef.current?.slug) {
-                        loadMovieData(data.slug);
-                    } else if (art) {
-                        art.currentTime = data.time;
-                        if (data.isPlaying) art.play(); else art.pause();
-                    }
-                    setIsReadyToWatch(true); 
-                    break;
-                case 'request_sync':
-                    if (isHost && currentMovieRef.current && art) {
-                        socket.emit("video_action", { roomId, action: 'sync_current_state', slug: currentMovieRef.current.slug, time: art.currentTime, isPlaying: art.playing });
-                    }
-                    break;
+                case 'sync_current_state': setIsSyncing(false); setInitialTime(data.time); setHostCurrentTime(data.time); setIsHostPaused(!data.isPlaying); if (data.slug !== currentMovieRef.current?.slug) { loadMovieData(data.slug); } else if (art) { art.currentTime = data.time; if (data.isPlaying) art.play(); else art.pause(); } setIsReadyToWatch(true); break;
+                case 'request_sync': if (isHost && currentMovieRef.current && art) { socket.emit("video_action", { roomId, action: 'sync_current_state', slug: currentMovieRef.current.slug, time: art.currentTime, isPlaying: art.playing }); } break;
                 default: break;
             }
             setTimeout(() => { isRemoteUpdate.current = false; }, 800);
         });
-
-        // Chat
         const handleMsg = (data) => setMessages((prev) => [...prev, { ...data, isMe: false }]);
         socket.on("receive_message", handleMsg);
-        
-        // [MỚI] Xóa tin nhắn
-        socket.on("message_deleted", ({ messageId }) => {
-            setMessages(prev => prev.filter(m => m.id !== messageId));
-        });
-
-        // [FIX] Bỏ socket.on("user_joined") để tránh spam
-
-        return () => { 
-            socket.off("receive_message"); socket.off("update_viewers"); socket.off("message_deleted");
-            socket.off("error_join"); socket.off("joined_success"); socket.off("room_destroyed"); socket.off("role_update"); socket.off("receive_video_action"); socket.disconnect(); 
-        };
+        socket.on("message_deleted", ({ messageId }) => { setMessages(prev => prev.filter(m => m.id !== messageId)); });
+        return () => { socket.off("receive_message"); socket.off("update_viewers"); socket.off("message_deleted"); socket.off("error_join"); socket.off("joined_success"); socket.off("room_destroyed"); socket.off("role_update"); socket.off("receive_video_action"); socket.disconnect(); };
     }, [roomId, isHost, currentUser.id]); 
 
-    // Search Logic (Giữ nguyên)
     useEffect(() => {
         if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
         if (!searchQuery.trim()) { setSearchResults([]); setShowDropdown(false); return; }
-        searchTimeoutRef.current = setTimeout(async () => {
-            try {
-                const res = await searchMovies(searchQuery, 1);
-                if (res?.data?.items) { setSearchResults(res.data.items); setShowDropdown(true); }
-            } catch (error) { }
-        }, 500);
+        searchTimeoutRef.current = setTimeout(async () => { try { const res = await searchMovies(searchQuery, 1); if (res?.data?.items) { setSearchResults(res.data.items); setShowDropdown(true); } } catch (error) { } }, 500);
         return () => clearTimeout(searchTimeoutRef.current);
     }, [searchQuery]);
     
     const handleSelectMovie = (item) => { setSearchQuery(''); setShowDropdown(false); loadMovieData(item.slug); socket.emit("video_action", { roomId, action: 'change_movie', slug: item.slug, name: item.name, thumb: item.thumb_url }); };
-    
     const loadMovieData = async (slug) => { try { const data = await getMovieDetail(slug); if (data?.status) { setMovie(data.movie); setEpisodes(data.episodes || []); if (data.episodes?.[0]?.server_data?.length) setCurrentEpisode(data.episodes[0].server_data[0]); } } catch (err) {} };
-    
     const handleJoinSession = () => { setIsSyncing(true); socket.emit("video_action", { roomId, action: 'request_sync' }); };
     const handleForceSync = () => { socket.emit("video_action", { roomId, action: 'request_sync' }); };
-    
-    // [MỚI] Gửi tin nhắn có ID ngẫu nhiên
-    const handleSend = (e) => { 
-        e.preventDefault(); 
-        if (!inputMsg.trim()) return; 
-        const msgData = { 
-            id: Date.now().toString(), // ID tạm để xóa
-            roomId, 
-            text: inputMsg, 
-            user: { ...currentUser, isHost } // Gửi kèm trạng thái Host để hiển thị tag
-        };
-        socket.emit("send_message", msgData); 
-        setMessages(prev => [...prev, { ...msgData, isMe: true }]); 
-        setInputMsg(''); 
-    };
-
-    // [MỚI] Xử lý xóa tin nhắn
-    const handleDeleteMessage = (messageId) => {
-        if (confirm("Bạn muốn xóa tin nhắn này?")) {
-            socket.emit("delete_message", { roomId, messageId });
-        }
-    };
-
+    const handleSend = (e) => { e.preventDefault(); if (!inputMsg.trim()) return; const msgData = { id: Date.now().toString(), roomId, text: inputMsg, user: { ...currentUser, isHost } }; socket.emit("send_message", msgData); setMessages(prev => [...prev, { ...msgData, isMe: true }]); setInputMsg(''); };
+    const handleDeleteMessage = (messageId) => { if (confirm("Bạn muốn xóa tin nhắn này?")) { socket.emit("delete_message", { roomId, messageId }); } };
     const copyLink = () => { navigator.clipboard.writeText(window.location.href); alert("Đã sao chép link phòng!"); };
     const handleEndRoom = () => { if (confirm("Bạn có chắc muốn giải tán phòng không?")) socket.emit("end_room", { roomId, userId: currentUser.id }); };
-    
-    const onArtReady = (art) => {
-        artInstanceRef.current = art;
-        art.on('play', () => { if (isHost && !isRemoteUpdate.current) socket.emit("video_action", { roomId, action: 'play', time: art.currentTime }); });
-        art.on('pause', () => { if (isHost && !isRemoteUpdate.current) socket.emit("video_action", { roomId, action: 'pause', time: art.currentTime }); });
-        art.on('seek', (time) => { if (isHost && !isRemoteUpdate.current) socket.emit("video_action", { roomId, action: 'seek', time: time }); });
-        art.on('video:timeupdate', () => { if (isHost) setHostCurrentTime(art.currentTime); });
-    };
+    const onArtReady = (art) => { artInstanceRef.current = art; art.on('play', () => { if (isHost && !isRemoteUpdate.current) socket.emit("video_action", { roomId, action: 'play', time: art.currentTime }); }); art.on('pause', () => { if (isHost && !isRemoteUpdate.current) socket.emit("video_action", { roomId, action: 'pause', time: art.currentTime }); }); art.on('seek', (time) => { if (isHost && !isRemoteUpdate.current) socket.emit("video_action", { roomId, action: 'seek', time: time }); }); art.on('video:timeupdate', () => { if (isHost) setHostCurrentTime(art.currentTime); }); };
 
     if (!isJoined) return <div className="w-full h-screen flex items-center justify-center"><div className="text-white animate-pulse flex flex-col items-center gap-3"><FaSpinner className="animate-spin text-3xl"/><span>Đang vào phòng...</span></div></div>;
 
+    // --- [SEO TITLE BUILDER] ---
+    const pageTitle = movie ? `Đang chiếu: ${movie.name} | Watch Party` : `Phòng ${roomId} | Watch Party`;
+    const pageDesc = movie ? `Tham gia ngay để xem phim ${movie.name} cùng bạn bè tại phòng ${roomId}.` : `Tham gia phòng xem chung ${roomId} để cùng thưởng thức các bộ phim hay.`;
+    const pageImage = movie ? `${IMG_URL}${movie.thumb_url}` : 'https://i.imgur.com/YOUR_DEFAULT_BANNER.jpg';
+
     return (
         <div className="w-full min-h-screen pt-24 pb-4 px-4 font-sans flex flex-col">
+            {/* --- [SEO DYNAMIC] --- */}
+            <Helmet>
+                <title>{pageTitle}</title>
+                <meta name="description" content={pageDesc} />
+                
+                {/* Facebook OG */}
+                <meta property="og:title" content={pageTitle} />
+                <meta property="og:description" content={pageDesc} />
+                <meta property="og:image" content={pageImage} />
+                <meta property="og:url" content={window.location.href} />
+                
+                {/* Twitter */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={pageTitle} />
+                <meta name="twitter:description" content={pageDesc} />
+                <meta name="twitter:image" content={pageImage} />
+            </Helmet>
+            {/* --- [END SEO] --- */}
+
             {toastMsg && <Toast msg={toastMsg} />}
             
-            {/* Header */}
             <div className="max-w-[1500px] mx-auto w-full mb-6 flex flex-col lg:flex-row gap-4 justify-between items-center bg-white/5 backdrop-blur-xl border border-white/10 p-3 rounded-2xl shadow-lg relative z-[50]">
                 <div className="flex items-center gap-4 px-2">
                     <div className={`w-3 h-3 rounded-full animate-pulse shadow-[0_0_12px] ${isHost ? 'bg-green-500 shadow-green-500' : 'bg-blue-500 shadow-blue-500'}`}></div>
@@ -288,7 +179,6 @@ const WatchParty = () => {
                 <div className="flex gap-2 w-full lg:w-auto justify-end"><button onClick={copyLink} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-300 transition-all"><FaCopy /> ID: {roomId}</button>{isHost && <button onClick={handleEndRoom} className="flex items-center gap-2 bg-red-600/10 hover:bg-red-600 border border-red-600/30 hover:border-red-600 text-red-500 hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all"><FaPowerOff /> End</button>}</div>
             </div>
 
-            {/* Main Content */}
             <div className="max-w-[1500px] mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 h-[600px] lg:h-[calc(100vh-180px)]">
                 <div className="lg:col-span-3 bg-black rounded-3xl overflow-hidden border border-white/10 relative shadow-[0_0_40px_rgba(0,0,0,0.5)] ring-1 ring-white/5 group">
                     {movie ? (
@@ -333,41 +223,16 @@ const WatchParty = () => {
                     )}
                 </div>
                 
-                {/* Chat Column */}
                 <div className="lg:col-span-1 bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col overflow-hidden shadow-xl ring-1 ring-white/5 h-full max-h-[600px] lg:max-h-none relative">
-                    
-                    {/* [FIX] HEADER CHAT + DROPDOWN USER */}
-                    <div 
-                        className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none"
-                        onClick={() => setShowViewerList(!showViewerList)}
-                    >
-                        <div className="flex items-center gap-2 text-white font-bold text-sm uppercase tracking-wider">
-                            <FaUserFriends className="text-red-500" /> 
-                            <span>Trò chuyện <span className="text-gray-500 text-xs">({viewers.length})</span></span>
-                        </div>
-                        <div className="text-gray-400">
-                            {showViewerList ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}
-                        </div>
+                    <div className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none" onClick={() => setShowViewerList(!showViewerList)}>
+                        <div className="flex items-center gap-2 text-white font-bold text-sm uppercase tracking-wider"><FaUserFriends className="text-red-500" /> <span>Trò chuyện <span className="text-gray-500 text-xs">({viewers.length})</span></span></div>
+                        <div className="text-gray-400">{showViewerList ? <FaChevronUp size={12}/> : <FaChevronDown size={12}/>}</div>
                     </div>
-
-                    {/* [MỚI] Viewer List Dropdown */}
-                    {showViewerList && (
-                        <ViewerList viewers={viewers} onClose={() => setShowViewerList(false)} />
-                    )}
-
+                    {showViewerList && <ViewerList viewers={viewers} onClose={() => setShowViewerList(false)} />}
                     <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 custom-scrollbar scroll-smooth bg-gradient-to-b from-transparent to-black/20">
                         {messages.length === 0 && <div className="flex flex-col items-center justify-center h-full text-gray-600 opacity-60"><FaUserFriends className="text-3xl mb-2" /><p className="text-xs font-medium">Bắt đầu trò chuyện đi nào!</p></div>}
-                        {messages.map((m, idx) => (
-                            <ChatMessage 
-                                key={idx} 
-                                msg={m} 
-                                isMe={m.isMe} 
-                                isHost={isHost} // Mình có phải Host không (để hiện nút xóa)
-                                onDelete={handleDeleteMessage}
-                            />
-                        ))}
+                        {messages.map((m, idx) => (<ChatMessage key={idx} msg={m} isMe={m.isMe} isHost={isHost} onDelete={handleDeleteMessage}/>))}
                     </div>
-                    
                     <div className="p-3 bg-black/20 border-t border-white/5"><form onSubmit={handleSend} className="relative group"><input type="text" value={inputMsg} autoFocus onChange={(e) => setInputMsg(e.target.value)} placeholder="Nhập tin nhắn..." className="w-full bg-[#0a0e17]/80 border border-white/10 rounded-2xl pl-4 pr-12 py-3.5 text-sm text-white focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all placeholder-gray-600" /><button type="submit" disabled={!inputMsg.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-red-600 hover:bg-red-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-xl transition-all shadow-lg active:scale-95"><FaPaperPlane size={12} /></button></form></div>
                 </div>
             </div>

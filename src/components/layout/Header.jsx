@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; // <--- IMPORT LINK
+import { useNavigate, Link } from 'react-router-dom'; 
 import { 
     FaSearch, FaChevronDown, FaTimes, FaSpinner, FaBars, 
     FaChevronUp, FaList, FaHistory, FaUser, FaHeart, 
@@ -124,7 +124,6 @@ const Header = () => {
                             <FaBars />
                         </button>
                         
-                        {/* 1. SỬA LOGO THÀNH LINK */}
                         <Link to="/" className="block hover:opacity-90 transition">
                             <Logo />
                         </Link>
@@ -141,7 +140,6 @@ const Header = () => {
                                 <span className="flex items-center gap-1 py-6">Danh sách <FaChevronDown size={8}/></span>
                                 <div className="absolute top-[80%] left-0 w-48 bg-[#111] border border-white/10 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-2 group-hover:translate-y-0 overflow-hidden py-2">
                                     {listItems.map((item) => (
-                                        // 2. SỬA DROPDOWN THÀNH LINK
                                         <Link 
                                             key={item.slug} 
                                             to={`/danh-sach/${item.slug}`} 
@@ -186,6 +184,18 @@ const Header = () => {
                                     </div>
                                 </div>
                             </li>
+
+                            {/* [ĐÃ CHUYỂN] Rạp Phim xuống cuối cùng */}
+                            <li>
+                                <Link to="/watch-party" className="group py-6 flex items-center gap-2 hover:text-white transition hover:scale-105">
+                                    <span className="text-red-500 group-hover:text-red-400 transition-colors"></span>
+                                    <span className="font-bold tracking-wide">Rạp Phim</span>
+                                    {/* Tag NEW nằm ngang */}
+                                    <span className="bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded-sm animate-pulse font-bold border border-red-400 shadow-[0_0_10px_rgba(220,38,38,0.6)] ml-1">
+                                        NEW
+                                    </span>
+                                </Link>
+                            </li>
                         </ul>
                     </div>
 
@@ -221,7 +231,6 @@ const Header = () => {
                                     {results.length > 0 ? (
                                         <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                                             {results.slice(0, 5).map((movie) => (
-                                                // 3. SỬA KẾT QUẢ TÌM KIẾM THÀNH LINK
                                                 <Link 
                                                     key={movie._id} 
                                                     to={`/phim/${movie.slug}`} 
@@ -266,7 +275,6 @@ const Header = () => {
                                         </div>
 
                                         <div className="py-1 flex flex-col">
-                                            {/* 4. SỬA MENU USER THÀNH LINK */}
                                             {(user.role === 'admin' || user.role === 'super_admin') && (
                                                 <Link 
                                                     to="/admin" 
@@ -342,6 +350,14 @@ const Header = () => {
 
                     <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-white/5 text-white font-medium transition">
                         <span className="w-6 text-center"><FaFilm className="text-phim-accent"/></span> Trang Chủ
+                    </Link>
+
+                    {/* Link Rạp Phim Mobile (Cũng đẹp) */}
+                    <Link to="/watch-party" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between py-3 px-4 rounded-lg bg-red-900/20 hover:bg-red-900/30 text-white font-bold transition border border-red-900/40">
+                        <div className="flex items-center gap-3">
+                            <span className="w-6 text-center"><FaFilm className="text-red-500"/></span> Rạp Phim
+                        </div>
+                        <span className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full animate-pulse shadow-lg">NEW</span>
                     </Link>
 
                     <div>

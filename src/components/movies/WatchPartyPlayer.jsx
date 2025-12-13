@@ -167,13 +167,13 @@ const WatchPartyPlayer = ({
                     const projectedHostTime = hostTimeRef.current + timeSinceUpdate;
                     const currentTime = art.currentTime; 
                     const diff = Math.abs(currentTime - projectedHostTime);
-                    if (diff > 5) { 
+                    if (diff > 3) { 
                         art.currentTime = projectedHostTime; 
                         art.play();
                         art.notice.show = `Đã đồng bộ lại với chủ phòng`;
                         if (onSyncClickRef.current) onSyncClickRef.current();
                     } else {
-                        art.notice.show = 'Tín hiệu đang tốt (Lệch < 5s)';
+                        art.notice.show = 'Tín hiệu đang tốt (Lệch < 3s)';
                     }
                 },
                 style: { display: 'flex', marginRight: '10px' }
@@ -209,7 +209,7 @@ const WatchPartyPlayer = ({
             if (startTime > 0) {
                 art.currentTime = startTime;
                 art.play();
-                setTimeout(() => { if (Math.abs(art.currentTime - startTime) > 5) art.currentTime = startTime; }, 1000);
+                setTimeout(() => { if (Math.abs(art.currentTime - startTime) > 3) art.currentTime = startTime; }, 1000);
             } else if (option.autoplay) {
                 art.play().catch(() => art.muted = true);
             }
