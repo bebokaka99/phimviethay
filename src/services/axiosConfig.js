@@ -5,23 +5,22 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const instance = axios.create({
     baseURL: BASE_URL, 
-    // [TỐI ƯU] Tăng lên 50s để chờ Server Render "tỉnh ngủ" (Cold Start)
     timeout: 50000, 
     headers: { 'Content-Type': 'application/json' },
 });
 
-// Biến cờ ngăn chặn redirect liên tục (Logic cũ của bạn rất tốt, giữ nguyên)
 let isRedirecting = false;
 
 // --- 1. REQUEST INTERCEPTOR ---
 instance.interceptors.request.use(
     (config) => {
-        // Chặn request chồng chéo khi đang bị đá văng
         if (isRedirecting && !config.url.includes('/auth/')) {
-            return new Promise(() => {}); // Treo request
+            return new Promise(() => {}); 
         }
 
-        const token = localStorage.getItem('token'); 
+        // [CẬP NHẬT] Kiểm tra cả 2 key để chắc chắn bắt được Token
+        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+        
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -33,32 +32,28 @@ instance.interceptors.request.use(
 // --- 2. RESPONSE INTERCEPTOR ---
 instance.interceptors.response.use(
     (response) => {
-        // Mở khóa nếu login thành công
         if (response.config.url.includes('/auth/')) {
             isRedirecting = false;
         }
-        // [TỐI ƯU] Trả về thẳng data để code trong Component gọn hơn (bỏ bớt .data)
         return response.data; 
     },
     (error) => {
-        // Nếu đang redirect thì lờ đi mọi lỗi khác
         if (isRedirecting && !error.config?.url.includes('/auth/')) {
             return new Promise(() => {});
         }
 
         const { response } = error;
 
-        // [MỚI] Bắt lỗi Rate Limit (429) từ Server
+        // Bắt lỗi Rate Limit (429)
         if (response && response.status === 429) {
-            console.warn("Bạn đang thao tác quá nhanh, vui lòng chậm lại!");
-            // Có thể return Promise.reject để UI hiện thông báo riêng nếu cần
+            console.warn("Thao tác quá nhanh, vui lòng chờ giây lát...");
             return Promise.reject(error);
         }
 
-        // Bắt lỗi 401 (Unauthorized) hoặc 403 (Forbidden)
+        // Bắt lỗi 401 (Unauthorized)
         if (response && (response.status === 401 || response.status === 403)) {
             
-            // Ngoại lệ: Sai pass khi đang login -> Trả lỗi về cho Form xử lý
+            // Ngoại lệ: Sai pass khi đang login -> Trả lỗi về cho Form
             if (response.config.url.includes('/auth/')) {
                 return Promise.reject(error);
             }
@@ -67,11 +62,12 @@ instance.interceptors.response.use(
             if (!isRedirecting) {
                 isRedirecting = true;
                 
-                // Dọn dẹp
+                // Dọn dẹp sạch sẽ
                 localStorage.removeItem('token');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('user');
 
-                // Redirect cứng
                 window.location.href = '/login?expired=true';
             }
             

@@ -5,7 +5,7 @@ import axios from './axiosConfig';
 export const register = async (userData) => {
     try {
         const data = await axios.post('/auth/register', userData);
-        return data; // AxiosConfig đã trả về data rồi
+        return data; 
     } catch (error) {
         throw error.response?.data?.message || 'Lỗi kết nối server';
     }
@@ -17,6 +17,7 @@ export const login = async (userData) => {
         
         if (res.token) {
             localStorage.setItem('user', JSON.stringify(res.user));
+            // Lưu key 'token' để đồng bộ với axiosConfig của bạn
             localStorage.setItem('token', res.token);
         }
         
@@ -26,9 +27,26 @@ export const login = async (userData) => {
     }
 };
 
+// [MỚI] Hàm lấy thông tin user sau khi có Token (Dùng cho Google Login)
+export const getMe = async () => {
+    try {
+        const res = await axios.get('/auth/me');
+        // res chính là object user trả về từ server
+        if (res) {
+            localStorage.setItem('user', JSON.stringify(res));
+        }
+        return res;
+    } catch (error) {
+        console.error("Lỗi lấy thông tin user:", error);
+        return null;
+    }
+};
+
 export const logout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('accessToken'); // Xóa sạch các loại key
+    localStorage.removeItem('refreshToken');
     window.location.href = '/login'; 
 };
 
@@ -38,12 +56,12 @@ export const getCurrentUser = () => {
     return null;
 };
 
-// --- USER & FAVORITES API ---
+// --- USER & FAVORITES API (GIỮ NGUYÊN CODE CŨ CỦA BẠN) ---
 
 export const getFavorites = async () => {
     try {
         const data = await axios.get('/user/favorites');
-        return data; // [SỬA] Bỏ .data
+        return data; 
     } catch (error) { return []; }
 };
 
@@ -83,13 +101,13 @@ export const updateProfile = async (data) => {
         if (res.user) {
             localStorage.setItem('user', JSON.stringify(res.user));
         }
-        return res; // [SỬA] Bỏ .data
+        return res;
     } catch (error) {
         throw error.response?.data?.message || 'Lỗi cập nhật';
     }
 };
 
-// --- HISTORY API ---
+// --- HISTORY API (GIỮ NGUYÊN) ---
 
 export const setWatchHistory = async (data) => {
     const token = localStorage.getItem('token');
@@ -104,7 +122,7 @@ export const getWatchHistory = async () => {
     if (!token) return [];
     try {
         const data = await axios.get('/user/history');
-        return data; // [SỬA] Bỏ .data
+        return data; 
     } catch (error) { return []; }
 };
 
