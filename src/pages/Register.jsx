@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { register, getCurrentUser } from '../services/authService';
 import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaIdCard, FaCheckCircle, FaExclamationCircle, FaTimes } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc'; // [NEW] Import icon Google
 import LogoImg from '../assets/logo.png';
 
+// Component Toast thông báo (Giữ nguyên logic cũ của bạn)
 const Toast = ({ type, message, onClose }) => {
     useEffect(() => { const timer = setTimeout(onClose, 3000); return () => clearTimeout(timer); }, [onClose]);
     const isSuccess = type === 'success';
@@ -20,89 +22,115 @@ const Toast = ({ type, message, onClose }) => {
 };
 
 const Register = () => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({ fullname: '', username: '', email: '', password: '', confirmPassword: '' });
-  const [toast, setToast] = useState(null);
-  const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+    const [formData, setFormData] = useState({ fullname: '', username: '', email: '', password: '', confirmPassword: '' });
+    const [toast, setToast] = useState(null);
+    const [loading, setLoading] = useState(false);
 
-  useEffect(() => { if (getCurrentUser()) navigate('/'); }, [navigate]);
+    useEffect(() => { if (getCurrentUser()) navigate('/'); }, [navigate]);
 
-  const handleSubmit = async (e) => {
-      e.preventDefault();
-      setToast(null);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setToast(null);
 
-      if (formData.password !== formData.confirmPassword) {
-          setToast({ type: 'error', message: 'Mật khẩu nhập lại không khớp!' });
-          return;
-      }
+        if (formData.password !== formData.confirmPassword) {
+            setToast({ type: 'error', message: 'Mật khẩu nhập lại không khớp!' });
+            return;
+        }
 
-      setLoading(true);
-      try {
-          const { confirmPassword, ...dataToSend } = formData;
-          await register(dataToSend);
-          setToast({ type: 'success', message: 'Đăng ký thành công! Đang chuyển hướng...' });
-          setTimeout(() => navigate('/login'), 1500);
-      } catch (err) {
-          const msg = err.response?.data?.message || err.message || "Đăng ký thất bại";
-          setToast({ type: 'error', message: msg });
-      } finally {
-          setLoading(false);
-      }
-  };
+        setLoading(true);
+        try {
+            const { confirmPassword, ...dataToSend } = formData;
+            await register(dataToSend);
+            setToast({ type: 'success', message: 'Đăng ký thành công! Đang chuyển hướng...' });
+            setTimeout(() => navigate('/login'), 1500);
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message || "Đăng ký thất bại";
+            setToast({ type: 'error', message: msg });
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center relative overflow-hidden font-sans py-10">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 blur-sm scale-105 animate-pulse-slow"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/50"></div>
+    // [NEW] Hàm xử lý Google Login
+    const handleGoogleLogin = () => {
+        let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        // Xử lý chuỗi để đảm bảo đúng đường dẫn Auth
+        API_URL = API_URL.replace(/\/$/, '');
+        API_URL = API_URL.replace(/\/api$/, '');
+        
+        // Chuyển hướng sang Google
+        window.open(`${API_URL}/api/auth/google`, "_self");
+    };
 
-        {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+    return (
+        <div className="min-h-screen bg-[#050505] flex items-center justify-center relative overflow-hidden font-sans py-10">
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 blur-sm scale-105 animate-pulse-slow"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/50"></div>
 
-        <div className="relative z-10 w-full max-w-lg p-8 bg-black/60 backdrop-blur-xl rounded-2xl shadow-[0_0_40px_rgba(229,9,20,0.2)] border border-white/10 animate-fade-in-up">
-            <button onClick={() => navigate('/')} className="absolute top-5 left-5 text-gray-400 hover:text-white transition p-2 hover:bg-white/10 rounded-full"><FaArrowLeft /></button>
+            {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
-             <div className="text-center mb-8 flex justify-center">
-                 <img src={LogoImg} alt="PhimVietHay Logo" className="h-16 md:h-20 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300" />
-            </div>
+            <div className="relative z-10 w-full max-w-lg p-8 bg-black/60 backdrop-blur-xl rounded-2xl shadow-[0_0_40px_rgba(229,9,20,0.2)] border border-white/10 animate-fade-in-up">
+                <button onClick={() => navigate('/')} className="absolute top-5 left-5 text-gray-400 hover:text-white transition p-2 hover:bg-white/10 rounded-full"><FaArrowLeft /></button>
 
-            <h2 className="text-2xl font-bold text-white mb-6 text-center tracking-wide">Đăng Ký Thành Viên</h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaIdCard /></div>
-                    <input type="text" placeholder="Tên hiển thị (VD: Nguyễn Văn A)" required className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.fullname} onChange={(e) => setFormData({...formData, fullname: e.target.value})}/>
+                 <div className="text-center mb-8 flex justify-center">
+                     <img src={LogoImg} alt="PhimVietHay Logo" className="h-16 md:h-20 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300" />
                 </div>
 
-                <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaUser /></div>
-                    <input type="text" placeholder="Tên đăng nhập (Viết liền không dấu)" required pattern="[a-zA-Z0-9_]+" className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})}/>
+                <h2 className="text-2xl font-bold text-white mb-6 text-center tracking-wide">Đăng Ký Thành Viên</h2>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaIdCard /></div>
+                        <input type="text" placeholder="Tên hiển thị (VD: Nguyễn Văn A)" required className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.fullname} onChange={(e) => setFormData({...formData, fullname: e.target.value})}/>
+                    </div>
+
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaUser /></div>
+                        <input type="text" placeholder="Tên đăng nhập (Viết liền không dấu)" required pattern="[a-zA-Z0-9_]+" className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})}/>
+                    </div>
+
+                    <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaEnvelope /></div>
+                        <input type="email" placeholder="Địa chỉ Email" required className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})}/>
+                    </div>
+                    
+                    <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaLock /></div>
+                        <input type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" required minLength={6} className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})}/>
+                    </div>
+
+                    <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaCheckCircle /></div>
+                        <input type="password" placeholder="Nhập lại mật khẩu" required className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}/>
+                    </div>
+
+                    <button disabled={loading} className="w-full py-3.5 rounded-xl bg-phim-accent text-white font-bold text-lg hover:bg-red-700 transition-all transform active:scale-95 shadow-lg shadow-red-900/30 mt-4 disabled:opacity-70 disabled:cursor-not-allowed">
+                        {loading ? 'Đang xử lý...' : 'Đăng Ký Ngay'}
+                    </button>
+                </form>
+
+                {/* [NEW] Nút đăng ký nhanh bằng Google */}
+                <div className="my-6 flex items-center gap-4">
+                    <div className="h-[1px] bg-white/10 flex-1"></div>
+                    <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Hoặc</span>
+                    <div className="h-[1px] bg-white/10 flex-1"></div>
                 </div>
 
-                <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaEnvelope /></div>
-                    <input type="email" placeholder="Địa chỉ Email" required className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})}/>
-                </div>
-                
-                <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaLock /></div>
-                    <input type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" required minLength={6} className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})}/>
-                </div>
-
-                <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-phim-accent transition-colors"><FaCheckCircle /></div>
-                    <input type="password" placeholder="Nhập lại mật khẩu" required className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-[#1a1a1a]/80 text-white border border-white/10 focus:border-phim-accent focus:ring-2 focus:ring-phim-accent/30 transition-all outline-none placeholder-gray-500" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}/>
-                </div>
-
-                <button disabled={loading} className="w-full py-3.5 rounded-xl bg-phim-accent text-white font-bold text-lg hover:bg-red-700 transition-all transform active:scale-95 shadow-lg shadow-red-900/30 mt-4 disabled:opacity-70 disabled:cursor-not-allowed">
-                    {loading ? 'Đang xử lý...' : 'Đăng Ký Ngay'}
+                <button 
+                    onClick={handleGoogleLogin}
+                    className="w-full py-3.5 rounded-xl bg-white text-black font-bold text-md hover:bg-gray-100 transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 shadow-lg group"
+                >
+                    <FcGoogle className="text-2xl group-hover:scale-110 transition-transform" /> 
+                    <span>Đăng ký nhanh bằng Google</span>
                 </button>
-            </form>
 
-            <div className="mt-6 text-gray-400 text-sm text-center">
-                Đã có tài khoản? <span onClick={() => navigate('/login')} className="text-white hover:underline cursor-pointer font-bold ml-1 transition-colors hover:text-phim-accent">Đăng nhập ngay</span>.
+                <div className="mt-6 text-gray-400 text-sm text-center">
+                    Đã có tài khoản? <span onClick={() => navigate('/login')} className="text-white hover:underline cursor-pointer font-bold ml-1 transition-colors hover:text-phim-accent">Đăng nhập ngay</span>.
+                </div>
             </div>
         </div>
-    </div>
-  );
+    );
 };
 
 export default Register;
