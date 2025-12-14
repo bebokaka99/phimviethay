@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import ScrollToTopBtn from '../common/ScrollToTopBtn';
+import Chatbot from '../common/Chatbot'; // [NEW] Import Chatbot
 
 const MainLayout = () => {
   return (
@@ -15,7 +16,10 @@ const MainLayout = () => {
       </main>
 
       <Footer />
+      
+      {/* Các thành phần Fixed (Nổi trên màn hình) */}
       <ScrollToTopBtn />
+      <Chatbot />
     </div>
   );
 };

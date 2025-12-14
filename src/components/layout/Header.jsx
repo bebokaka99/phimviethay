@@ -20,7 +20,7 @@ const Header = () => {
     const [results, setResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const debouncedKeyword = useDebounce(keyword, 500);
-    const searchRef = useRef(null);
+    const searchRef = useRef(null); // Ref bao bọc cả Search và Avatar
 
     const listItems = [
         { name: 'Phim Mới', slug: 'phim-moi' }, { name: 'Phim Bộ', slug: 'phim-bo' }, { name: 'Phim Lẻ', slug: 'phim-le' },
@@ -29,7 +29,14 @@ const Header = () => {
 
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 20);
-        const handleClickOutside = (event) => { if (searchRef.current && !searchRef.current.contains(event.target)) setShowSearch(false); };
+        
+        // Điều chỉnh: handleClickOutside giờ chỉ cần kiểm tra xem có click vào vùng search không
+        const handleClickOutside = (event) => { 
+             // Nếu click ra ngoài thanh Search chính, ẩn kết quả đi
+             if (searchRef.current && !searchRef.current.contains(event.target)) {
+                 setShowSearch(false); 
+             }
+        };
         
         const initHeaderData = async () => {
             const menu = await getMenuData(); 
@@ -88,6 +95,7 @@ const Header = () => {
 
     return (
         <>
+            {/* Z-index 100 của Header là ok, nó nằm dưới Chatbot (9999) */}
             <header className={`fixed top-0 w-full z-[100] transition-all duration-500 ${isScrolled ? 'bg-[#0a0e17]/90 backdrop-blur-xl shadow-2xl h-16 border-b border-white/5' : 'bg-gradient-to-b from-black/80 to-transparent h-20 md:h-24'}`}>
                 <div className="w-full h-full px-4 md:px-8 container mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4 lg:gap-8">
@@ -124,19 +132,22 @@ const Header = () => {
                     </div>
 
                     <div className="flex items-center gap-3 lg:gap-5" ref={searchRef}>
-                        <div className={`relative flex items-center transition-all duration-300 ease-out ${showSearch ? 'w-[200px] sm:w-[300px] bg-[#1a1a1a] border-white/20' : 'w-10 bg-transparent border-transparent'} border rounded-full overflow-hidden h-10`}>
+                        {/* Container tìm kiếm: Phải có relative để kết quả search được căn đúng */}
+                        <div className={`relative flex items-center transition-all duration-300 ease-out ${showSearch ? 'w-[200px] sm:w-[300px] bg-[#1a1a1a] border-white/20' : 'w-10 bg-transparent border-transparent'} border rounded-full overflow-visible h-10`}>
                             <button onClick={() => setShowSearch(!showSearch)} className={`absolute left-0 top-0 w-10 h-10 flex items-center justify-center text-gray-300 hover:text-white transition-colors z-10`}><FaSearch className="text-sm"/></button>
                             <form onSubmit={handleEnterSearch} className={`flex-1 pl-10 pr-8 h-full transition-opacity duration-200 ${showSearch ? 'opacity-100' : 'opacity-0'}`}><input type="text" placeholder="Tìm kiếm phim..." className="w-full h-full bg-transparent text-sm text-white placeholder-gray-500 outline-none" value={keyword} onChange={(e) => setKeyword(e.target.value)} /></form>
                             {showSearch && (<button onClick={() => { setShowSearch(false); setKeyword(''); setResults([]); }} className="absolute right-3 text-gray-500 hover:text-white transition">{isSearching ? <FaSpinner className="animate-spin text-red-500"/> : <FaTimes/>}</button>)}
-                        </div>
-                        {showSearch && keyword.length > 0 && results.length > 0 && (
-                            <div className="absolute top-full right-0 mt-3 w-[320px] bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-fade-in-up z-[110]">
-                                <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
-                                    {results.slice(0, 5).map((movie) => (<Link key={movie._id} to={`/phim/${movie.slug}`} onClick={() => { setShowSearch(false); setKeyword(''); }} className="flex items-center gap-3 p-3 hover:bg-white/5 transition border-b border-white/5 last:border-0 group"><img src={movie.thumb_url} alt="" className="w-10 h-14 object-cover rounded-md shadow-md group-hover:scale-105 transition-transform" /><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-white truncate group-hover:text-red-500 transition">{movie.name}</h4><p className="text-xs text-gray-500 truncate mt-0.5">{movie.origin_name} • {movie.year}</p></div></Link>))}
-                                    <div onClick={handleEnterSearch} className="p-3 text-center text-xs font-bold text-red-500 cursor-pointer hover:bg-white/5 transition uppercase tracking-wide">Xem tất cả kết quả</div>
+                        
+                            {/* [KHỐI KẾT QUẢ TÌM KIẾM ĐÃ DI CHUYỂN VÀO TRONG] */}
+                            {showSearch && keyword.length > 0 && results.length > 0 && (
+                                <div className="absolute top-full right-0 mt-3 w-[320px] bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-fade-in-up z-[110]">
+                                    <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
+                                        {results.slice(0, 5).map((movie) => (<Link key={movie._id} to={`/phim/${movie.slug}`} onClick={() => { setShowSearch(false); setKeyword(''); }} className="flex items-center gap-3 p-3 hover:bg-white/5 transition border-b border-white/5 last:border-0 group"><img src={movie.thumb_url} alt="" className="w-10 h-14 object-cover rounded-md shadow-md group-hover:scale-105 transition-transform" /><div className="flex-1 min-w-0"><h4 className="text-sm font-bold text-white truncate group-hover:text-red-500 transition">{movie.name}</h4><p className="text-xs text-gray-500 truncate mt-0.5">{movie.origin_name} • {movie.year}</p></div></Link>))}
+                                        <div onClick={handleEnterSearch} className="p-3 text-center text-xs font-bold text-red-500 cursor-pointer hover:bg-white/5 transition uppercase tracking-wide">Xem tất cả kết quả</div>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                         {user ? (
                             <div className="relative group cursor-pointer py-2">
                                 <div className="flex items-center gap-2"><UserAvatar user={user} className="w-9 h-9 border border-white/10 group-hover:border-red-500 transition-colors" /></div>
