@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FaRobot, FaPaperPlane, FaMinus } from 'react-icons/fa';
+import { FaRobot, FaPaperPlane, FaTimes, FaMinus } from 'react-icons/fa';
 import axios from '../../services/axiosConfig';
 
 const Chatbot = () => {
@@ -12,7 +12,7 @@ const Chatbot = () => {
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
 
-    // Tự động cuộn xuống cuối khi mở chat hoặc có tin nhắn mới
+    // Tự động cuộn xuống cuối
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => {
@@ -35,7 +35,7 @@ const Chatbot = () => {
             setMessages(prev => [...prev, { text: res.reply, sender: "bot" }]);
         } catch (error) {
             const errorMessage = error.response && error.response.status === 429 
-                ? "AI đang quá tải do nhiều người dùng, bạn chờ 1 phút rồi thử lại nhé! ⏳"
+                ? "AI đang quá tải, chờ 1 phút nhé! ⏳"
                 : "Lỗi kết nối, thử lại sau nhé! 🤖";
             
             setMessages(prev => [...prev, { text: errorMessage, sender: "bot" }]);
@@ -44,41 +44,58 @@ const Chatbot = () => {
         }
     };
 
-    // Vị trí cố định của nút tròn (bottom-24 = 96px, right-8 = 32px)
-    const buttonSize = '56px'; // w-14/h-14
+    // Kích thước nút tròn
+    const buttonSize = '56px'; 
 
     return createPortal(
-        // [QUAN TRỌNG] Chỉ định kích thước nhỏ nhất cho container ngoài cùng khi đóng (Chỉ bằng nút bấm)
-        // và dùng pointer-events-none để cho phép click xuyên qua toàn bộ container
+        // [CONTAINER CHÍNH]
+        // Mobile: Khi mở -> Full màn hình (fixed inset-0). Khi đóng -> Chỉ chiếm chỗ nút bấm.
+        // Desktop (md): Giữ nguyên logic cũ (bottom-24 right-8).
         <div 
-            className={`fixed bottom-24 right-8 z-[9999] font-sans transition-all duration-300 ${isOpen ? 'h-[500px] w-[350px]' : `h-[${buttonSize}] w-[${buttonSize}]`}`}
+            className={`
+                z-[9999] font-sans transition-all duration-300
+                ${isOpen 
+                    ? 'fixed inset-0 md:inset-auto md:bottom-24 md:right-8 w-full h-full md:w-[350px] md:h-[500px]' 
+                    : `fixed bottom-20 right-4 md:bottom-24 md:right-8 w-[${buttonSize}] h-[${buttonSize}]`
+                }
+            `}
             style={{
-                // Khi đóng, chỉ chặn click ở vùng của nút bấm
-                pointerEvents: isOpen ? 'auto' : 'none', 
-                height: isOpen ? '500px' : buttonSize,
-                width: isOpen ? '350px' : buttonSize,
+                pointerEvents: isOpen ? 'auto' : 'none',
+                // Cập nhật lại kích thước động cho style inline để đảm bảo animation mượt
+                width: isOpen ? (window.innerWidth >= 768 ? '350px' : '100%') : buttonSize,
+                height: isOpen ? (window.innerWidth >= 768 ? '500px' : '100%') : buttonSize,
             }}
         >
             
-            {/* Cửa sổ chat (Chỉ hiện khi mở) */}
+            {/* [CỬA SỔ CHAT] */}
             <div className={`
-                w-[350px] h-[500px] bg-[#111] border border-white/10 rounded-2xl shadow-2xl 
-                flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right
-                ${isOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-0 opacity-0 translate-y-10 pointer-events-none'}
-                ${isOpen ? 'absolute bottom-0 right-0' : 'hidden'} 
+                bg-[#111] border-white/10 shadow-2xl flex flex-col overflow-hidden transition-all duration-300
+                ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-0 translate-y-10 pointer-events-none'}
+                
+                /* Mobile: Full màn hình, không bo góc */
+                w-full h-full rounded-none border-0
+                
+                /* Desktop: Popup nhỏ, bo góc, có viền */
+                md:w-[350px] md:h-[500px] md:rounded-2xl md:border
+                
+                absolute bottom-0 right-0
             `}>
                 
-                {/* Header Chatbot (Thu nhỏ) */}
-                <div className="bg-gradient-to-r from-red-700 to-red-900 p-4 flex justify-between items-center cursor-pointer select-none" onClick={() => setIsOpen(false)} style={{ pointerEvents: 'auto' }}>
-                    <div className="flex items-center gap-2">
+                {/* Header Chatbot */}
+                <div className="bg-gradient-to-r from-red-700 to-red-900 p-4 flex justify-between items-center shrink-0 cursor-pointer md:cursor-default">
+                    <div className="flex items-center gap-2" onClick={() => setIsOpen(false)}> {/* Cho phép click header để đóng trên mobile */}
                         <FaRobot className="text-white text-xl" />
-                        <h3 className="font-bold text-white">Trợ Lý Phim AI</h3>
+                        <h3 className="font-bold text-white">Trợ Lý AI</h3>
                     </div>
-                    <FaMinus className="text-white/80 hover:text-white"/>
+                    {/* Nút đóng: Dùng icon Times (X) trên mobile cho dễ hiểu, Minus (-) trên PC */}
+                    <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white p-2">
+                        <span className="md:hidden"><FaTimes size={20}/></span>
+                        <span className="hidden md:block"><FaMinus/></span>
+                    </button>
                 </div>
 
                 {/* Nội dung chat */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0a0a0a] custom-scrollbar" style={{ pointerEvents: 'auto' }}>
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0a0a0a] custom-scrollbar pb-20 md:pb-4">
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm whitespace-pre-wrap ${
@@ -103,26 +120,31 @@ const Chatbot = () => {
                 </div>
 
                 {/* Ô nhập liệu */}
-                <form onSubmit={handleSend} className="p-3 bg-[#111] border-t border-white/10 flex gap-2" style={{ pointerEvents: 'auto' }}>
+                <form onSubmit={handleSend} className="p-3 bg-[#111] border-t border-white/10 flex gap-2 shrink-0 safe-area-bottom">
                     <input 
                         type="text" 
-                        placeholder="Tìm phim gì..." 
-                        className="flex-1 bg-gray-800 text-white text-sm rounded-full px-4 py-2 outline-none focus:ring-1 focus:ring-red-500 placeholder-gray-500 transition-all"
+                        placeholder="Hỏi về phim..." 
+                        // Mobile dùng text-base (16px) để tránh iOS zoom, Desktop dùng text-sm
+                        className="flex-1 bg-gray-800 text-white text-base md:text-sm rounded-full px-4 py-3 md:py-2 outline-none focus:ring-1 focus:ring-red-500 placeholder-gray-500 transition-all"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                     />
-                    <button type="submit" disabled={loading} className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center text-white hover:bg-red-700 transition disabled:opacity-50 shadow-lg shadow-red-900/20">
-                        <FaPaperPlane className="text-sm ml-1" />
+                    <button type="submit" disabled={loading} className="w-12 h-12 md:w-10 md:h-10 bg-red-600 rounded-full flex items-center justify-center text-white hover:bg-red-700 transition disabled:opacity-50 shadow-lg">
+                        <FaPaperPlane className="text-base md:text-sm ml-1" />
                     </button>
                 </form>
             </div>
 
             {/* Nút tròn mở/đóng chat */}
-            {/* Nút này luôn nằm ở góc phải dưới cùng của container */}
             <button 
                 onClick={() => setIsOpen(true)}
-                className={`w-14 h-14 bg-gradient-to-r from-red-600 to-orange-600 rounded-full shadow-lg shadow-red-500/30 flex items-center justify-center text-white text-2xl hover:scale-110 transition-transform animate-bounce-slow ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-                style={{ position: 'absolute', bottom: 0, right: 0, pointerEvents: 'auto' }} 
+                className={`
+                    bg-gradient-to-r from-red-600 to-orange-600 rounded-full shadow-lg shadow-red-500/30 
+                    flex items-center justify-center text-white hover:scale-110 transition-transform animate-bounce-slow
+                    absolute bottom-0 right-0 z-50
+                    ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}
+                    w-14 h-14 text-2xl
+                `}
             >
                 <FaRobot />
             </button>
