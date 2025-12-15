@@ -1,289 +1,234 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPaperPlane, FaTrashAlt, FaComments, FaThumbsUp, FaReply, FaChevronDown, FaChevronUp } from 'react-icons/fa';
-
-import { getComments, addComment, deleteComment, toggleLikeComment } from '../../services/commentService';
+import { FaComments, FaThumbsUp, FaChevronDown, FaChevronUp, FaThumbtack, FaCrown, FaShieldAlt, FaTrash } from 'react-icons/fa';
+import { getComments, addComment, deleteComment, toggleLikeComment, togglePinComment } from '../../services/commentService';
 import { getCurrentUser } from '../../services/authService';
 import UserAvatar from '../common/UserAvatar';
 
-// Xử lý hiển thị thời gian, bao gồm fix lệch múi giờ
+// Helper: Format thời gian
 const timeAgo = (dateString) => {
     if (!dateString) return '';
-    
-    let dateStr = String(dateString);
-    if (!dateStr.includes('Z') && !dateStr.includes('+')) dateStr += 'Z';
-    
-    const date = new Date(dateStr);
-    const now = new Date();
+    let dateStr = String(dateString); if (!dateStr.includes('Z')) dateStr += 'Z';
+    const date = new Date(dateStr); const now = new Date();
     const seconds = Math.floor((now - date) / 1000);
-    
-    let adjustedSeconds = seconds;
-    // Điều chỉnh nếu chênh lệch nằm trong khoảng logic múi giờ cụ thể (khoảng 7 tiếng)
-    if (adjustedSeconds > 21000 && adjustedSeconds < 29000) adjustedSeconds -= 25200;
-
-    if (adjustedSeconds < 60) return 'Vừa xong';
-    const minutes = Math.floor(adjustedSeconds / 60);
-    if (minutes < 60) return `${minutes} phút trước`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} giờ trước`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days} ngày trước`;
-    
-    return date.toLocaleDateString('vi-VN');
+    if (seconds < 60) return 'Vừa xong';
+    const minutes = Math.floor(seconds / 60); if (minutes < 60) return `${minutes} phút trước`;
+    const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours} giờ trước`;
+    const days = Math.floor(hours / 24); return `${days} ngày trước`;
 };
 
+// --- COMPONENT CON: ITEM BÌNH LUẬN (Đưa ra ngoài để tránh Re-render gây giật) ---
+const CommentItem = ({ cmt, user, allComments, actions, openRepliesState, replyState }) => {
+    const isReply = !!cmt.parent_id;
+    // Lọc replies trực tiếp từ props để tránh tính toán lại
+    const replies = !isReply ? allComments.filter(c => c.parent_id === cmt.id).sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) : [];
+    
+    const isAdminOrSuper = user?.role === 'admin' || user?.role === 'super_admin';
+    const isPinned = Boolean(cmt.is_pinned);
+    const isOwner = user?.id === cmt.user_id;
+    const { openReplies, setOpenReplies } = openRepliesState;
+    const { replyTo, setReplyTo, replyContent, setReplyContent, handleReplySubmit } = replyState;
+
+    // Style cho Role
+    const getNameStyle = (role) => {
+        if (role === 'super_admin') return 'text-yellow-400 font-extrabold';
+        if (role === 'admin') return 'text-red-500 font-bold';
+        return 'text-white font-bold';
+    };
+
+    const renderBadge = (role) => {
+        if (role === 'super_admin') return <span className="text-yellow-500 text-[10px] font-bold border border-yellow-500/50 px-1 rounded flex items-center gap-1"><FaCrown size={8}/> SUPER ADMIN</span>;
+        if (role === 'admin') return <span className="text-red-500 text-[10px] font-bold border border-red-500/50 px-1 rounded flex items-center gap-1"><FaShieldAlt size={8}/> ADMIN</span>;
+        return null;
+    };
+
+    return (
+        <div className={`flex gap-3 ${isReply ? 'mt-3' : 'mt-6'} p-3 rounded-lg transition-all duration-300 ${isPinned ? 'bg-green-900/10 border border-green-500/40 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border border-transparent hover:bg-white/5'}`}>
+            {/* Avatar */}
+            <div className={`flex-shrink-0 ${isReply ? 'w-8 h-8' : 'w-10 h-10'}`}>
+                <UserAvatar user={cmt} className="w-full h-full" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+                {/* Header: Tên, Badge, Time */}
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                    {isPinned && <FaThumbtack className="text-green-500 text-xs rotate-45 animate-pulse" title="Được ghim" />}
+                    <span className={`text-sm ${getNameStyle(cmt.role)} cursor-pointer hover:underline`}>
+                        {cmt.fullname || cmt.username}
+                    </span>
+                    {renderBadge(cmt.role)}
+                    <span className="text-xs text-gray-500 ml-auto">{timeAgo(cmt.created_at)}</span>
+                </div>
+
+                {/* Content */}
+                <div className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${isPinned ? 'text-white font-medium' : 'text-gray-300'}`}>
+                    {cmt.content}
+                </div>
+
+                {/* Actions Bar */}
+                <div className="flex items-center gap-4 mt-2 select-none">
+                    {/* Like */}
+                    <button onClick={() => actions.handleLike(cmt.id)} className={`text-xs font-bold flex gap-1 items-center transition ${cmt.is_liked ? 'text-red-500' : 'text-gray-400 hover:text-white'}`}>
+                        <FaThumbsUp/> {cmt.like_count > 0 && cmt.like_count}
+                    </button>
+
+                    {/* Reply Button */}
+                    {!isReply && (
+                        <button onClick={() => setReplyTo(replyTo === cmt.id ? null : cmt.id)} className="text-xs font-bold text-gray-400 hover:text-white transition">
+                            Phản hồi
+                        </button>
+                    )}
+
+                    {/* Delete Button (Luôn hiện với Admin/Owner) */}
+                    {(isOwner || isAdminOrSuper) && (
+                        <button onClick={() => actions.handleDelete(cmt.id)} className="text-xs font-bold text-gray-500 hover:text-red-500 flex items-center gap-1 transition">
+                            <FaTrash size={10}/> Xóa
+                        </button>
+                    )}
+
+                    {/* Pin Button (Chỉ Admin & Comment gốc) */}
+                    {isAdminOrSuper && !isReply && (
+                        <button onClick={() => actions.handlePin(cmt.id)} className={`text-xs font-bold ml-auto flex items-center gap-1 transition ${isPinned ? 'text-green-500' : 'text-gray-500 hover:text-white'}`}>
+                            <FaThumbtack size={10} className={isPinned ? '' : 'rotate-45'} />
+                            {isPinned ? 'Bỏ ghim' : 'Ghim'}
+                        </button>
+                    )}
+                </div>
+
+                {/* Form Reply */}
+                {replyTo === cmt.id && (
+                    <form onSubmit={(e) => handleReplySubmit(e, cmt.id)} className="mt-3 flex gap-2 animate-fade-in">
+                        <input 
+                            autoFocus 
+                            className="flex-1 bg-transparent border-b border-gray-600 text-white text-sm py-1 outline-none focus:border-blue-500 transition" 
+                            value={replyContent} 
+                            onChange={e => setReplyContent(e.target.value)} 
+                            placeholder={`Phản hồi ${cmt.fullname || cmt.username}...`} 
+                        />
+                        <button disabled={!replyContent.trim()} className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-full font-bold transition disabled:opacity-50">Gửi</button>
+                    </form>
+                )}
+
+                {/* Danh sách Reply con */}
+                {!isReply && replies.length > 0 && (
+                    <div className="mt-2">
+                        <button onClick={() => setOpenReplies(p => ({...p, [cmt.id]: !p[cmt.id]}))} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-bold transition">
+                            {openReplies[cmt.id] ? <FaChevronUp/> : <FaChevronDown/>} {replies.length} phản hồi
+                        </button>
+                        {openReplies[cmt.id] && (
+                            <div className="pl-4 border-l-2 border-white/10 mt-2">
+                                {replies.map(r => (
+                                    <CommentItem 
+                                        key={r.id} 
+                                        cmt={r} 
+                                        user={user} 
+                                        allComments={allComments} 
+                                        actions={actions}
+                                        openRepliesState={{openReplies, setOpenReplies}}
+                                        replyState={{replyTo, setReplyTo, replyContent, setReplyContent, handleReplySubmit}}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT ---
 const CommentSection = ({ movieSlug, episodeSlug }) => {
-    // State quản lý dữ liệu
     const [comments, setComments] = useState([]);
     const [user, setUser] = useState(getCurrentUser());
-    const [loading, setLoading] = useState(false);
-    
-    // State quản lý input và UI phản hồi
     const [content, setContent] = useState('');
     const [replyContent, setReplyContent] = useState('');
     const [replyTo, setReplyTo] = useState(null);
     const [openReplies, setOpenReplies] = useState({});
-
     const navigate = useNavigate();
 
-    useEffect(() => {
-        if (movieSlug) loadComments();
-    }, [movieSlug, episodeSlug]);
+    useEffect(() => { if (movieSlug) loadComments(); }, [movieSlug, episodeSlug]);
+    const loadComments = async () => { setComments(await getComments(movieSlug, episodeSlug)); };
 
-    const loadComments = async () => {
-        const data = await getComments(movieSlug, episodeSlug);
-        setComments(data);
-    };
-
-    const toggleReplyVisibility = (commentId) => {
-        setOpenReplies(prev => ({
-            ...prev,
-            [commentId]: !prev[commentId]
-        }));
-    };
-
-    const handleSubmit = async (e, parentId = null) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!user) {
-            navigate('/login');
-            return;
-        }
+        if (!user) { navigate('/login'); return; }
+        if (!content.trim()) return;
 
-        // Xác định nội dung gửi đi (comment gốc hay phản hồi)
-        const textToSend = parentId ? replyContent : content;
-        if (!textToSend.trim()) return;
-
-        setLoading(true);
-        try {
-            const payload = { 
-                movieSlug, 
-                episodeSlug: episodeSlug || null, 
-                content: textToSend, 
-                parentId: parentId 
-            };
-            
-            const newComments = await addComment(payload);
-            setComments(newComments);
-
-            if (parentId) {
-                setReplyTo(null);
-                setReplyContent('');
-                // Tự động mở danh sách reply sau khi phản hồi thành công
-                setOpenReplies(prev => ({ ...prev, [parentId]: true }));
-            } else {
-                setContent('');
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
+        await addComment({ movieSlug, episodeSlug: episodeSlug || null, content });
+        loadComments();
+        setContent('');
     };
 
-    const handleLike = async (commentId) => {
-        if (!user) {
-            navigate('/login');
-            return;
-        }
+    const handleReplySubmit = async (e, parentId) => {
+        e.preventDefault();
+        if (!user) { navigate('/login'); return; }
+        if (!replyContent.trim()) return;
 
-        // Optimistic UI update: Cập nhật giao diện ngay lập tức
-        setComments(prev => prev.map(c => {
-            if (c.id === commentId) {
-                return { 
-                    ...c, 
-                    is_liked: !c.is_liked, 
-                    like_count: c.is_liked ? c.like_count - 1 : c.like_count + 1 
-                };
-            }
-            return c;
-        }));
+        await addComment({ movieSlug, episodeSlug: episodeSlug || null, content: replyContent, parentId });
+        loadComments();
+        setReplyTo(null);
+        setReplyContent('');
+        setOpenReplies(p => ({...p, [parentId]: true}));
+    };
 
-        await toggleLikeComment(commentId);
+    const handleLike = async (id) => {
+        if (!user) { navigate('/login'); return; }
+        setComments(p => p.map(c => c.id === id ? { ...c, is_liked: !c.is_liked, like_count: c.is_liked ? c.like_count - 1 : c.like_count + 1 } : c));
+        await toggleLikeComment(id);
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Xóa bình luận này?')) {
-            await deleteComment(id);
-            loadComments();
-        }
+        if (window.confirm('Xóa bình luận này?')) { await deleteComment(id); loadComments(); }
     };
 
-    const rootComments = comments.filter(c => !c.parent_id);
-    
-    const getReplies = (parentId) => {
-        return comments
-            .filter(c => c.parent_id === parentId)
-            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const handlePin = async (id) => {
+        if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) return;
+        await togglePinComment(id);
+        loadComments();
     };
 
-    // Component con render từng item bình luận
-    const CommentItem = ({ cmt, isReply = false }) => {
-        const replies = !isReply ? getReplies(cmt.id) : [];
-        const isRepliesOpen = openReplies[cmt.id];
-
-        return (
-            <div className={`flex gap-3 group ${isReply ? 'mt-4' : 'mt-6'}`}>
-                {/* Avatar */}
-                <div className={`flex-shrink-0 ${isReply ? 'w-6 h-6' : 'w-10 h-10'} rounded-full overflow-hidden border border-white/10 bg-gray-800`}>
-                    <UserAvatar user={cmt} className="w-full h-full" fontSize={isReply ? "text-xs" : "text-sm"} />
-                </div>
-
-                <div className="flex-1">
-                    {/* Header: Tên user + Thời gian */}
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className={`font-bold text-white ${isReply ? 'text-xs' : 'text-sm'} cursor-pointer hover:underline`}>
-                            {cmt.fullname || cmt.username}
-                        </span>
-                        {cmt.role === 'admin' && (
-                            <span className="bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider border border-red-500/50 shadow-sm">
-                                ADMIN
-                            </span>
-                        )}
-                        <span className="text-[11px] text-gray-400">{timeAgo(cmt.created_at)}</span>
-                    </div>
-
-                    {/* Nội dung bình luận */}
-                    <div className={`text-gray-300 leading-relaxed whitespace-pre-wrap ${isReply ? 'text-xs' : 'text-sm'}`}>
-                        {cmt.content.split(' ').map((word, i) =>
-                            word.startsWith('@') 
-                                ? <span key={i} className="text-blue-400 hover:underline cursor-pointer mr-1">{word}</span> 
-                                : word + ' '
-                        )}
-                    </div>
-
-                    {/* Actions: Like, Reply, Delete */}
-                    <div className="flex items-center gap-4 mt-2">
-                        <button 
-                            onClick={() => handleLike(cmt.id)} 
-                            className={`flex items-center gap-1.5 text-xs font-bold transition ${cmt.is_liked ? 'text-red-500' : 'text-gray-400 hover:text-white'}`}
-                        >
-                            <FaThumbsUp /> {cmt.like_count > 0 && cmt.like_count}
-                        </button>
-                        
-                        {!isReply && (
-                            <button 
-                                onClick={() => setReplyTo(replyTo === cmt.id ? null : cmt.id)} 
-                                className="text-xs font-bold text-gray-400 hover:text-white transition px-2 py-1 rounded-full hover:bg-white/10"
-                            >
-                                Phản hồi
-                            </button>
-                        )}
-                        
-                        {(user?.id === cmt.user_id || user?.role === 'admin') && (
-                            <button 
-                                onClick={() => handleDelete(cmt.id)} 
-                                className="text-xs font-bold text-gray-400 hover:text-red-500 transition ml-auto opacity-0 group-hover:opacity-100"
-                            >
-                                Xóa
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Form phản hồi */}
-                    {replyTo === cmt.id && (
-                        <form onSubmit={(e) => handleSubmit(e, cmt.id)} className="mt-3 flex gap-3 animate-fade-in items-start">
-                            <div className="w-6 h-6 rounded-full overflow-hidden border border-white/10 flex-shrink-0">
-                                <UserAvatar user={user} className="w-full h-full" fontSize="text-xs" />
-                            </div>
-                            <div className="flex-1 relative">
-                                <input 
-                                    autoFocus 
-                                    type="text" 
-                                    className="w-full bg-transparent border-b border-white/20 py-1 px-2 text-sm text-white focus:border-white outline-none transition-colors placeholder-gray-500" 
-                                    placeholder="Thêm phản hồi công khai..." 
-                                    value={replyContent} 
-                                    onChange={(e) => setReplyContent(e.target.value)} 
-                                />
-                                <div className="flex justify-end gap-2 mt-2">
-                                    <button type="button" onClick={() => setReplyTo(null)} className="text-xs font-bold text-white hover:bg-white/10 px-3 py-1.5 rounded-full">Hủy</button>
-                                    <button disabled={!replyContent.trim()} className="text-xs font-bold bg-[#3ea6ff] text-black px-3 py-1.5 rounded-full hover:bg-[#65b8ff] disabled:opacity-50 disabled:bg-gray-700 disabled:text-gray-400">Phản hồi</button>
-                                </div>
-                            </div>
-                        </form>
-                    )}
-
-                    {/* Danh sách phản hồi con */}
-                    {!isReply && replies.length > 0 && (
-                        <div className="mt-2">
-                            <button onClick={() => toggleReplyVisibility(cmt.id)} className="flex items-center gap-2 text-blue-400 hover:bg-blue-400/10 px-3 py-1.5 rounded-full text-xs font-bold transition">
-                                {isRepliesOpen ? <FaChevronUp /> : <FaChevronDown />}
-                                {isRepliesOpen ? 'Ẩn phản hồi' : `${replies.length} phản hồi`}
-                            </button>
-                            {isRepliesOpen && (
-                                <div className="mt-2 animate-fade-in">
-                                    {replies.map(reply => (<CommentItem key={reply.id} cmt={reply} isReply={true} />))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    };
+    // Gom nhóm actions để truyền xuống
+    const actions = { handleLike, handleDelete, handlePin };
 
     return (
-        <div className="mt-10 max-w-5xl mx-auto">
-            <div className="flex items-center gap-3 mb-6">
-                <h3 className="text-xl font-bold text-white">
-                    Bình luận <span className="text-gray-400 text-lg font-normal">{comments.length}</span>
-                </h3>
-            </div>
-
-            {/* Form nhập bình luận chính */}
+        <div className="mt-8 max-w-5xl mx-auto">
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <FaComments className="text-red-500"/> Bình luận <span className="text-gray-500 text-lg font-normal">({comments.length})</span>
+            </h3>
+            
             <div className="flex gap-4 mb-8">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 flex-shrink-0 bg-gray-800">
+                <div className="w-10 h-10 flex-shrink-0">
                     <UserAvatar user={user} className="w-full h-full" />
                 </div>
-                <form onSubmit={(e) => handleSubmit(e, null)} className="flex-1">
-                    <div className="relative group">
-                        <textarea
-                            className="w-full bg-transparent border-b border-white/20 text-white placeholder-gray-500 focus:border-white outline-none resize-none h-10 focus:h-24 transition-all duration-300 text-sm py-2"
-                            placeholder="Viết bình luận..."
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            onFocus={() => !user && navigate('/login')}
-                        ></textarea>
-                    </div>
-                    {content.trim() && (
-                        <div className="flex justify-end mt-2 animate-fade-in gap-2">
-                            <button type="button" onClick={() => setContent('')} className="text-xs font-bold text-white hover:bg-white/10 px-3 py-2 rounded-full transition">Hủy</button>
-                            <button disabled={loading} className="bg-[#3ea6ff] text-black px-4 py-2 rounded-full text-xs font-bold hover:bg-[#65b8ff] transition shadow-lg disabled:opacity-50 disabled:bg-gray-700 disabled:text-gray-400">Bình luận</button>
+                <form onSubmit={handleSubmit} className="flex-1">
+                    <textarea 
+                        className="w-full bg-transparent border-b border-gray-700 text-white p-2 outline-none focus:border-red-500 transition resize-none h-10 focus:h-24 text-sm" 
+                        placeholder="Chia sẻ cảm nghĩ của bạn về phim..." 
+                        value={content} 
+                        onChange={e => setContent(e.target.value)} 
+                        onFocus={() => !user && navigate('/login')} 
+                    />
+                    {content && (
+                        <div className="flex justify-end mt-2 animate-fade-in">
+                            <button className="bg-red-600 hover:bg-red-700 text-white px-5 py-1.5 rounded-full text-sm font-bold shadow-lg transition transform hover:scale-105">Gửi</button>
                         </div>
                     )}
                 </form>
             </div>
 
-            {/* Danh sách bình luận */}
             <div className="space-y-2">
-                {rootComments.length > 0 ? (
-                    rootComments.map(cmt => <CommentItem key={cmt.id} cmt={cmt} />)
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-gray-500 border border-dashed border-white/10 rounded-xl bg-white/5">
-                        <FaComments className="text-4xl mb-3 opacity-30" />
-                        <p className="text-sm font-medium">Chưa có bình luận nào.</p>
-                        <p className="text-xs opacity-60 mt-1">Hãy là người đầu tiên chia sẻ cảm nghĩ về phim này!</p>
-                    </div>
-                )}
+                {comments.filter(c => !c.parent_id).map(c => (
+                    <CommentItem 
+                        key={c.id} 
+                        cmt={c} 
+                        user={user} 
+                        allComments={comments} 
+                        actions={actions}
+                        openRepliesState={{openReplies, setOpenReplies}}
+                        replyState={{replyTo, setReplyTo, replyContent, setReplyContent, handleReplySubmit}}
+                    />
+                ))}
             </div>
         </div>
     );
